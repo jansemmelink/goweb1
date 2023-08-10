@@ -1,0 +1,33 @@
+{
+    "home":{
+        "menu":{
+            "title":"Main Menu",
+            "items":[
+                {"caption":"Item1", "next":"one"},
+                {"caption":"Item2", "next":"two"},
+                {"caption":"Item3", "next":"three"}
+            ]
+        }
+    },
+    "one":{
+        "menu":{
+            "title":"Main Menu",
+            "items":[
+                {"caption":"Two", "next":"two"},
+                {"caption":"Back", "next":"back"},
+                {"caption":"Home", "next":"home"}
+            ]
+        }
+    },
+    "two":{
+        "prompt":{
+            "caption":"Enter something",
+            "next":"home"
+        }
+    },
+    "three":{
+        "final":{
+            "caption":"Good bye!"
+        }
+    }
+}
