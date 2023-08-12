@@ -9,16 +9,17 @@ import (
 
 	"github.com/go-msvc/errors"
 	"github.com/google/uuid"
+	"github.com/gorilla/sessions"
 )
 
 type fileItemMenu struct {
-	Title string             `json:"title"`
+	Title Caption            `json:"title"`
 	Items []fileItemMenuItem `json:"items"`
 }
 
 func (menu fileItemMenu) Validate() error {
-	if menu.Title == "" {
-		return errors.Errorf("missing title")
+	if err := menu.Title.Validate(); err != nil {
+		return errors.Wrapf(err, "invalid title")
 	}
 	if len(menu.Items) == 0 {
 		return errors.Errorf("missing items")
@@ -42,16 +43,25 @@ func (menu fileItemMenu) Render(ctx context.Context, buffer io.Writer) (*PageDat
 		Links: map[string]fileItemNext{},
 		Data:  nil,
 	}
+	session := ctx.Value(CtxSession{}).(*sessions.Session)
+	title, err := menu.Title.Render(session)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to render title")
+	}
 	menuTmplData := tmplDataForMenu{
-		Title: menu.Title, //todo: i18n and substitute...
+		Title: title, //todo: i18n and substitute...
 		Items: []tmplDataForMenuItem{},
 	}
 	for _, item := range menu.Items {
+		caption, err := item.Caption.Render(session)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to render item caption")
+		}
 		uuid := uuid.New().String()
 		pageData.Links[uuid] = item.Next
 		menuTmplData.Items = append(menuTmplData.Items,
 			tmplDataForMenuItem{
-				Caption:  item.Caption, //todo: i18n and substitute...
+				Caption:  caption, //todo: i18n and substitute...
 				NextUUID: uuid,
 			})
 	}
@@ -73,13 +83,13 @@ func (menu fileItemMenu) Process(ctx context.Context, httpReq *http.Request) err
 }
 
 type fileItemMenuItem struct {
-	Caption string       `json:"caption"`
+	Caption Caption      `json:"caption"`
 	Next    fileItemNext `json:"next"`
 }
 
 func (item fileItemMenuItem) Validate() error {
-	if item.Caption == "" {
-		return errors.Errorf("missing caption")
+	if err := item.Caption.Validate(); err != nil {
+		return errors.Wrapf(err, "invalid caption")
 	}
 	if err := item.Next.Validate(); err != nil {
 		return errors.Wrapf(err, "invalid next")

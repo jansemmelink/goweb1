@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/go-msvc/errors"
+	"github.com/gorilla/sessions"
 )
 
 type fileItemNext []fileItemNextStep
@@ -24,9 +25,16 @@ func (next fileItemNext) Validate() error {
 }
 
 func (next fileItemNext) Execute(ctx context.Context) (nextItemId string, err error) {
+	session := ctx.Value(CtxSession{}).(*sessions.Session)
 	for stepIndex, step := range next {
 		if step.Set != nil {
-
+			name := step.Set.Name.Rendered(ctx)
+			if !fieldNameRegex.MatchString(name) {
+				return "", errors.Wrapf(err, "step[%d].name.render(%s) invalid", stepIndex, name)
+			}
+			value := step.Set.Value.Rendered(ctx)
+			log.Debugf("SET(%s)=\"%s\"", name, value)
+			session.Values[name] = value
 			continue
 		}
 		if step.Item != nil {
@@ -63,21 +71,6 @@ func (next fileItemNextStep) Validate() error {
 	}
 	if count > 1 {
 		return errors.Errorf("%d instead of 1 of id|set", count)
-	}
-	return nil
-}
-
-type fileItemSet struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
-}
-
-func (set fileItemSet) Validate() error {
-	if set.Name == "" {
-		return errors.Errorf("missing name")
-	}
-	if set.Value == "" {
-		return errors.Errorf("missing value")
 	}
 	return nil
 }

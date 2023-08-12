@@ -92,7 +92,6 @@ type ClientData struct {
 	DeviceID string
 }
 
-type CtxSession struct{}
 type CtxClientData struct{}
 
 func (w webApp) hdlr() func(httpRes http.ResponseWriter, httpReq *http.Request) {
@@ -108,7 +107,7 @@ func (w webApp) hdlr() func(httpRes http.ResponseWriter, httpReq *http.Request) 
 		//todo: log current item id in each line of the logger
 
 		ctx := w.userContext(httpReq)
-		session := ctx.Value(CtxSession{}).(*sessions.Session)
+		session := ctx.Value(app.CtxSession{}).(*sessions.Session)
 
 		//load the currect app item to display/process
 		currentItemId, ok := session.Values["current_item"].(string)
@@ -133,59 +132,89 @@ func (w webApp) hdlr() func(httpRes http.ResponseWriter, httpReq *http.Request) 
 			return
 		}
 
-		//navigate from menu if GET with ?next=<next item uuid>
-		if nextItemUUID := httpReq.URL.Query().Get("next"); nextItemUUID != "" {
-			//special case:
-			if nextItemUUID == "home" {
-				//reset and start over
-				nextItem, ok := w.app.GetItem(nextItemUUID) //not a uuid but a known value
-				if ok {
-					currentItem = nextItem
-					currentItemId = "home"
-				}
-			} else {
-				//can only apply if page stored any links
-				pageSessionData, ok := session.Values["page_data"].(app.PageData)
-				if ok {
-					nextSteps, ok := pageSessionData.Links[nextItemUUID]
-					if ok {
-						nextItemId, err := nextSteps.Execute(ctx)
-						if err != nil {
-							log.Errorf("failed to execute next steps: %+v", err)
-						} else if nextItemId != "" {
-							log.Debugf("next:\"%s\"", nextItemId)
-							nextItem, ok := w.app.GetItem(nextItemId)
-							if ok {
-								log.Debugf("Navigated to next=%s", nextItemId)
-								currentItemId = nextItemId
-								currentItem = nextItem
-							} else {
-								log.Errorf("unknown next:\"%s\"", nextItemId)
-							}
-						} else {
-							log.Debugf("next steps dit not defined next item - stay here")
-						}
-					} else {
-						log.Debugf("pageLink %s not found", nextItemUUID)
-					}
-				} else {
-					log.Debugf("pageLinks not defined, ignoring %s", nextItemUUID)
-				}
-			}
-		} else { //if has next=... in URL
-			log.Debugf("next=... not defined in URL")
-		}
-
 		switch httpReq.Method {
 		case http.MethodPost:
-			httpReq.ParseForm()
-			if err := currentItem.Process(ctx, httpReq); err != nil {
+			log.Debugf("processing...")
+			nextItemId, err := currentItem.Process(ctx, httpReq)
+			if err != nil {
+				log.Errorf("processing failed: %+v", err)
 				redirect(httpRes, "failed to process input", "home", "/") //todo: retries etc...
 				return
 			}
+			log.Debugf("processing done, next=\"%s\"", nextItemId)
+			if nextItemId == "" {
+				log.Errorf("processing succeeded but did not return nextItemId: %+v", err)
+				redirect(httpRes, "failed to process input", "home", "/") //todo: retries etc...
+				return
+			}
+			nextItem, ok := w.app.GetItem(nextItemId)
+			if ok {
+				log.Debugf("Navigated to next=%s", nextItemId)
+				currentItemId = nextItemId
+				currentItem = nextItem
+			} else {
+				log.Errorf("unknown next:\"%s\"", nextItemId)
+				redirect(httpRes, "failed to process input", "home", "/") //todo: retries etc...
+				return
+			}
+
+			//navigate to next
+			log.Errorf("NOT YET NAV AFTER POST!!!")
+
 		case http.MethodGet:
+			//navigate from menu if GET with ?next=<next item uuid>
+			if nextItemUUID := httpReq.URL.Query().Get("next"); nextItemUUID != "" {
+				//special case:
+				if nextItemUUID == "home" {
+					//reset and start over
+					nextItem, ok := w.app.GetItem(nextItemUUID) //not a uuid but a known value
+					if ok {
+						currentItem = nextItem
+						currentItemId = "home"
+					}
+				} else {
+					//can only apply if page stored any links
+					pageSessionData, ok := session.Values["page_data"].(app.PageData)
+					if ok {
+						nextSteps, ok := pageSessionData.Links[nextItemUUID]
+						if ok {
+							logSession(ctx, "before execute next steps")
+							nextItemId, err := nextSteps.Execute(ctx)
+							if err != nil {
+								log.Errorf("failed to execute next steps: %+v", err)
+							} else if nextItemId != "" {
+								logSession(ctx, "after execute next steps")
+								log.Debugf("next:\"%s\"", nextItemId)
+								nextItem, ok := w.app.GetItem(nextItemId)
+								if ok {
+									log.Debugf("Navigated to next=%s", nextItemId)
+									currentItemId = nextItemId
+									currentItem = nextItem
+								} else {
+									log.Errorf("unknown next:\"%s\"", nextItemId)
+									redirect(httpRes, "failed to process input", "home", "/") //todo: retries etc...
+									return
+								}
+							} else {
+								log.Debugf("next steps dit not defined next item - stay here")
+							}
+						} else {
+							log.Debugf("pageLink %s not found", nextItemUUID)
+						}
+					} else {
+						log.Debugf("pageLinks not defined, ignoring %s", nextItemUUID)
+					}
+				}
+			} else { //if has next=... in URL
+				log.Debugf("next=... not defined in URL")
+			}
+		default:
+			log.Errorf("Invalid method")
+			http.Error(httpRes, "method not allowed", http.StatusMethodNotAllowed)
+			return
 		} //switch method
 
+		log.Debugf("Rendering item(%s) ...", currentItemId)
 		//render into buffer so that rendering can complete and define page data
 		//before we write the cookie and session and then the page content
 		//(wrong order does not save correctly)
@@ -203,6 +232,7 @@ func (w webApp) hdlr() func(httpRes http.ResponseWriter, httpReq *http.Request) 
 		if pageSessionData != nil {
 			session.Values["page_data"] = pageSessionData
 			log.Debugf("UPDATED PAGE DATA ========================")
+			log.Debugf("PAGE: (%T)%+v", pageSessionData, pageSessionData)
 		}
 		//update and save session data
 		session.Values["current_item"] = currentItemId
@@ -243,7 +273,7 @@ func (w webApp) userContext(httpReq *http.Request) context.Context {
 	clientData := ClientData{}
 	if cookie, err := httpReq.Cookie(w.cookieName); err == nil {
 		if err = w.cookieCutter.Decode(w.cookieName, cookie.Value, &clientData); err == nil {
-			log.Debugf("Decoded cookie(%s): (%T)%+v", w.cookieName, clientData, clientData)
+			//log.Debugf("Decoded cookie(%s): (%T)%+v", w.cookieName, clientData, clientData)
 		} else {
 			log.Errorf("Failed to decode cookie: %+v", err)
 		}
@@ -270,7 +300,7 @@ func (w webApp) userContext(httpReq *http.Request) context.Context {
 
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, CtxClientData{}, clientData)
-	ctx = context.WithValue(ctx, CtxSession{}, session)
+	ctx = context.WithValue(ctx, app.CtxSession{}, session)
 	return ctx
 } //webapp.userContext()
 
@@ -283,4 +313,12 @@ func redirect(httpRes http.ResponseWriter, message, button, link string) {
 			"</form>",
 		link, message, button)),
 	)
+}
+
+func logSession(ctx context.Context, title string) {
+	log.Debugf("SESSION %s", title)
+	session := ctx.Value(app.CtxSession{}).(*sessions.Session)
+	for n, v := range session.Values {
+		log.Debugf("  Session[%s] = (%T)%+v", n, v, v)
+	}
 }

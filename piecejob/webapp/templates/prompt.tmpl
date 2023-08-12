@@ -1,0 +1,10 @@
+{{define "head"}}<title>Some Prompt</title>{{end}}
+{{define "body"}}
+<div>
+  <form method="POST">
+    {{.Caption}}
+    <input name="SubmittedValue"/>
+    <button type="submit">Enter</button>
+  </form>
+</div>
+{{end}}

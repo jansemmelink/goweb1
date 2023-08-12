@@ -41,12 +41,19 @@ func (item fileItem) Render(ctx context.Context, buffer io.Writer) (*PageData, e
 	if item.Menu != nil {
 		return item.Menu.Render(ctx, buffer)
 	}
+	if item.Prompt != nil {
+		return item.Prompt.Render(ctx, buffer)
+	}
 	return nil, errors.Errorf("cannot render %+v", item)
 }
 
-func (item fileItem) Process(ctx context.Context, httpReq *http.Request) error {
-	if item.Menu != nil {
-		return item.Menu.Process(ctx, httpReq)
+func (item fileItem) Process(ctx context.Context, httpReq *http.Request) (string, error) {
+	//menu does not process a http POST
+	// if item.Menu != nil {
+	// 	return item.Menu.Process(ctx, httpReq)
+	// }
+	if item.Prompt != nil {
+		return item.Prompt.Process(ctx, httpReq)
 	}
-	return errors.Errorf("cannot process %+v", item)
+	return "", errors.Errorf("cannot process %+v", item)
 }

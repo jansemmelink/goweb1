@@ -39,7 +39,7 @@ func (app *app) Load(filename string) error {
 	}
 	for id, item := range fileItems {
 		if !itemIdRegex.MatchString(id) {
-			return errors.Errorf("invalid item id \"%s\" (expect lower alnum with dashes, e.g. \"my-item1-loader\")", id)
+			return errors.Errorf("missing/invalid item id \"%s\" (expect lower alnum with dashes, e.g. \"my-item1-loader\")", id)
 		}
 		if err := item.Validate(); err != nil {
 			return errors.Wrapf(err, "invalid item \"%s\"", id)
@@ -64,9 +64,12 @@ type AppItem interface {
 		err error)
 
 	//Process is called on method POST
-	Process(ctx context.Context, httpReq *http.Request) error
+	//return next item or error
+	//next item is required, return own if need to stay put
+	Process(ctx context.Context, httpReq *http.Request) (string, error)
 }
 
+type CtxSession struct{}
 type CtxPageData struct{}
 
 type PageData struct {
