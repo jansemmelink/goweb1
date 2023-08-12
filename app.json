@@ -5,7 +5,8 @@
             "items":[
                 {"caption":"Item1", "next":"one"},
                 {"caption":"Item2", "next":"two"},
-                {"caption":"Item3", "next":"three"}
+                {"caption":"Item3", "next":"three"},
+                {"caption":"Profile", "next":"profile"}
             ]
         }
     },
@@ -22,12 +23,37 @@
     "two":{
         "prompt":{
             "caption":"Enter something",
+            "name":"something",
             "next":"home"
         }
     },
     "three":{
         "final":{
             "caption":"Good bye!"
+        }
+    },
+    "profile":{
+        "menu":{
+            "title":"Profile",
+            "items":[
+                {"caption":"Name", "next":"change_name"},
+                {"caption":"Surname", "next":"change_surname"},
+                {"caption":"Home", "next":"home"}
+            ]
+        }
+    },
+    "change_name":{
+        "prompt":{
+            "caption":"Enter your name",
+            "name":"first_name",
+            "next":"profile"
+        }
+    },
+    "change_surname":{
+        "prompt":{
+            "caption":"Enter your surname",
+            "name":"surname",
+            "next":"profile"
         }
     }
 }

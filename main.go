@@ -84,6 +84,7 @@ func hdlr(app App) func(httpRes http.ResponseWriter, httpReq *http.Request) {
 
 		//load existing session or create a new session
 		if clientData.DeviceID == "" {
+			//new session
 			clientData.DeviceID = uuid.New().String()
 			log.Debugf("New Session: %s", clientData.DeviceID)
 		}
@@ -92,36 +93,81 @@ func hdlr(app App) func(httpRes http.ResponseWriter, httpReq *http.Request) {
 		if err != nil {
 			log.Errorf("failed to get session data: %+v", err)
 		} else {
-			session.Values["bar"] = "baz"
-			session.Values["baz"] = "foo"
-			log.Debugf("Session: %#v\n", session)
+			log.Debugf("Loaded Session: %#v\n", session)
 		}
 
-		//todo
-
-		//path e.g. "/xyz" -> id = "xyz"
-		id := httpReq.URL.Path[1:]
-		if id == "" {
-			id = "home"
+		//current id from session data
+		currentItemId, ok := session.Values["current_item"].(string)
+		if !ok || currentItemId == "" {
+			currentItemId = "home"
 		}
-		item, ok := app[id]
+		currentItem, ok := app[currentItemId]
 		if !ok {
-			http.Error(httpRes, fmt.Sprintf("unknown item \"%s\"", id), http.StatusNotFound)
-			return
+			log.Errorf("unknown current_item:\"%s\", reset to \"home\"", currentItemId)
+			currentItemId = "home"
+			currentItem, ok = app[currentItemId]
+			if !ok {
+				http.Error(httpRes, "cannot go home", http.StatusInternalServerError)
+				return
+			}
 		}
+
+		switch httpReq.Method {
+		case http.MethodPost:
+			if p := currentItem.Prompt; p != nil {
+				httpReq.ParseForm()
+				log.Debugf("form: %+v", httpReq.Form)
+				input := httpReq.Form["input"]
+				log.Debugf("input:\"%s\"", input)
+
+				//save input
+				session.Values[p.Name] = input
+				//todo validate
+
+				//navigate to next after valid input
+				nextItem, ok := app[p.Next]
+				if ok {
+					log.Debugf("Navigate to prompt.next=%s", p.Next)
+					currentItemId = p.Next
+					currentItem = nextItem
+				} else {
+					log.Errorf("unknown next:\"%s\"", p.Next)
+				}
+			} //case POST
+		case http.MethodGet:
+			//navigate from menu is GET with ?next=<next item>
+			if nextItemId := httpReq.URL.Query().Get("next"); nextItemId != "" {
+				nextItem, ok := app[nextItemId]
+				if ok {
+					log.Debugf("Navigate to next=%s", nextItemId)
+					currentItemId = nextItemId
+					currentItem = nextItem
+				} else {
+					log.Errorf("unknown next:\"%s\"", nextItemId)
+				}
+			} //case GET
+		} //switch method
 
 		//ctx := context.Background()
 
 		//render
 		html := ""
-		if m := item.Menu; m != nil {
+
+		//nav links
+		html += fmt.Sprintf("<p><a href=\"/?next=home\">Home</a></p>")
+		//html += fmt.Sprintf("<p><a href=\"/?next=back\">Back</a></p>")
+
+		//crumbs: todo... include only when can jump back, or show incremental back crumbs
+
+		log.Debugf("Rendering current_item:\"%s\"", currentItemId)
+		if m := currentItem.Menu; m != nil {
 			html += fmt.Sprintf("<h1>%s</h1>\n", m.Title)
 			for _, item := range m.Items {
-				html += fmt.Sprintf("<p><a href=\"%s\">%s</a></p>", item.Next, item.Caption)
+				html += fmt.Sprintf("<p><a href=\"/?next=%s\">%s</a></p>", item.Next, item.Caption)
 			}
-		} else if p := item.Prompt; p != nil {
-			html += fmt.Sprintf("<p>%s</p>", p.Caption)
-		} else if f := item.Final; f != nil {
+		} else if p := currentItem.Prompt; p != nil {
+			html += fmt.Sprintf("<form method=\"POST\">%s<input name=\"input\"/><button type=\"submit\">Enter</button></form>", p.Caption)
+		} else if f := currentItem.Final; f != nil {
 			html += fmt.Sprintf("<p>%s</p>", f.Caption)
 		} else {
 			http.Error(httpRes, "unknown item type", http.StatusInternalServerError)
@@ -129,7 +175,7 @@ func hdlr(app App) func(httpRes http.ResponseWriter, httpReq *http.Request) {
 		}
 
 		//update and save session data
-		session.Values["item"] = id
+		session.Values["current_item"] = currentItemId
 		err = session.Save(httpReq, httpRes)
 		if err != nil {
 			log.Errorf("failed to save session: %+v", err)

@@ -1,0 +1,138 @@
+{{define "head"}}<title>{{.Body.Header.Title}}</title>{{end}}
+{{define "body"}}
+
+  <script>
+function openSection(evt, sectionName) {
+  // Declare all variables
+  var i, tabcontent, tablinks;
+
+  // Get all elements with class="tabcontent" and hide them
+  tabcontent = document.getElementsByClassName("tabcontent");
+  for (i = 0; i < tabcontent.length; i++) {
+    tabcontent[i].style.display = "none";
+  }
+
+  // Get all elements with class="tablinks" and remove the class "active"
+  tablinks = document.getElementsByClassName("tablinks");
+  for (i = 0; i < tablinks.length; i++) {
+    tablinks[i].className = tablinks[i].className.replace(" active", "");
+  }
+
+  // Show the current tab, and add an "active" class to the button that opened the tab
+  document.getElementById(sectionName).style.display = "block";
+  evt.currentTarget.className += " active";
+}
+  </script>
+
+  <form class="modal-content animate" action="{{.Action}}" method="POST">
+    <!-- data that user cannot edit -->
+    <!-- todo: should be in the context for security -->
+    <!--input name="campaign_id" value="{{.CampaignID}}" type="hidden"/>
+    <input name="form_id" value="{{.ID}}" type="hidden"/>
+    <input name="form_rev" value="{{.Rev}}" type="hidden"/-->
+
+    <!-- form header -->
+    <div class="container">
+      <h1>{{.HtmlTitle}}</h1>
+      {{if .HtmlDescription}}<p>{{.HtmlDescription}}</p>{{end}}
+    </div>
+
+    <!-- with multiple sections, all sections display in a tab -->
+    {{ $nrSections := len .Sections }} {{ if gt $nrSections 1 }}
+    <!-- nav bar at the top to control which tab to display -->
+    <div class="tab">
+      {{range $section := .Sections}}
+        <button class="tablinks {{if $section.FirstSection}}active{{end}}" onclick="openSection(event, {{$section.Name}})">{{$section.Name}}</button>
+      {{end}}
+    </div>
+    {{end}}
+
+    <!-- Tab content for each section -->
+    {{range $section := .Sections}}
+    <div id="{{$section.Name}}" class="tabcontent"
+      {{if $section.FirstSection}}style="display: block"
+      {{else}}style="display: none"
+      {{end}}
+      >
+      <h2>{{$section.HtmlTitle}}</h2>
+      {{if $section.HtmlDescription}}<p>{{$section.HtmlDescription}}</p>{{end}}
+
+      <!-- all items in the section -->
+      {{range $item := $section.Items}}
+        {{if $field := $item.Field}}
+          <label for="{{$section.Name}}__{{$field.Name}}"><b>{{$field.HtmlTitle}}</b></label>
+          {{if $field.Short}}
+            <input type="text" id="{{$section.Name}}__{{$field.Name}}" placeholder="Enter {{$field.HtmlTitle}}" name="{{$section.Name}}__{{$field.Name}}" required>
+          {{else if $field.Integer}}
+            <input type="text" id="{{$section.Name}}__{{$field.Name}}" placeholder="Enter integer number for {{$field.HtmlTitle}}" name="{{$section.Name}}__{{$field.Name}}" required>
+          {{else if $field.Number}}
+            <input type="text" id="{{$section.Name}}__{{$field.Name}}" placeholder="Enter number for {{$field.HtmlTitle}}" name="{{$section.Name}}__{{$field.Name}}" required>
+          {{else if $field.Text}}
+            <textarea id="{{$section.Name}}__{{$field.Name}}" placeholder="Enter text for {{$field.HtmlTitle}}" name="{{$section.Name}}__{{$field.Name}}" rows="4" cols="50" required>current value...</textarea>
+          {{else if $field.Date}}
+            <div class="optionsGroupBelow">
+              <input type="date" id="{{$section.Name}}__{{$field.Name}}" _placeholder="YYYY-MM-DD" name="{{$section.Name}}__{{$field.Name}}"
+              {{if $field.Date.Min}} min="{{$field.Date.Min}}"{{end}}
+              {{if $field.Date.Max}} max="{{$field.Date.Max}}"{{end}}
+              required>
+            </div>
+          {{else if $field.Time}}
+            <div class="optionsGroupBelow">
+              <input type="time" id="{{$section.Name}}__{{$field.Name}}" placeholder="HH:MM" name="{{$section.Name}}__{{$field.Name}}"
+              {{if $field.Time.Min}} min="{{$field.Time.Min}}"{{end}}
+              {{if $field.Time.Max}} max="{{$field.Time.Max}}"{{end}}
+              required>
+            </div>
+          {{else if $field.Duration}}
+            <input type="text" id="{{$section.Name}}__{{$field.Name}}" placeholder="1s, 2m, 3h, 4d, 5mo, or 6y" name="{{$section.Name}}__{{$field.Name}}" required>
+          {{else if $field.Choice}}
+            <div class="optionsGroupBelow">
+              {{range $option := $field.Choice.Options}}
+              <div>
+                <input type="radio" id="{{$section.Name}}__{{$field.Name}}_{{$option.Value}}" name="{{$section.Name}}__{{$field.Name}}" value="{{$option.Value}}">
+                <label for="{{$option.Value}}">{{$option.HtmlTitle}}</label><br>
+              </div>
+              {{end}}
+            </div>
+          {{else if $field.Selection}}
+            <div class="optionsGroupBelow">
+              {{range $option := $field.Selection.Options}}
+                <input type="checkbox" id="{{$section.Name}}__{{$field.Name}}_{{$option.Value}}" name="{{$section.Name}}__{{$field.Name}}" value="{{$option.Value}}">
+                <label for="{{$option.Value}}">{{$option.HtmlTitle}}</label><br>
+              {{end}}
+            </div>
+          {{else}}
+            <input type="text" id="{{$section.Name}}__{{$field.Name}}" placeholder="Enter {{$field.HtmlTitle}}" name="{{$section.Name}}__{{$field.Name}}" required>
+          {{end}}
+        {{else if $header := $item.Header}}
+          <h3>{{$header.HtmlTitle}}</h3>
+          {{if $header.HtmlDescription}}<p>{{$header.HtmlDescription}}</p>{{end}}
+        {{else if $image := $item.Image}}
+          <div class="imgcontainer">
+            <img src="/resources/images/img_avatar2.png" alt="Avatar" class="centered">
+          </div>
+        {{else if $table := $item.Table}}
+          <p>TODO: Unsupported table item</p>
+        {{else if $sub := $item.Sub}}
+          <p>TODO: Unsupported sub item</p>
+        {{else}}
+          <p>TODO: Unsupported item</p>
+        {{end}}
+      {{end}}
+    </div>
+    {{end}}
+
+    <div class="container">
+      <button type="submit" class="submitbtn">Submit</button>
+      <!--label>
+        <input type="checkbox" checked="checked" name="remember"> Remember me
+      </label-->
+    </div>
+
+    <div class="container" style="background-color:#f1f1f1">
+      <button type="button" onclick="document.getElementById('id01').style.display='none'" class="cancelbtn">Cancel</button>
+      <!--span class="psw">Forgot <a href="#">password?</a></span-->
+    </div>
+  </form>
+
+{{end}}

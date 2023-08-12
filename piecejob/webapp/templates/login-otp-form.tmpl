@@ -1,0 +1,14 @@
+{{define "head"}}<title>Login</title>{{end}}
+{{define "body"}}
+<div>
+  <form class="modal-content animate" action="/otp" method="POST">
+    <h1>Login OTP</h1>
+    <p>Enter the OTP sent to {{.Email}}.</p>
+    <div class="container">
+      <label for="otp"><b>OTP</b></label>
+      <input type="text" placeholder="OTP" name="otp" required>
+      <button type="submit">Login</button>
+    </div>
+  </form>
+</div>
+{{end}}

@@ -1,0 +1,37 @@
+{{define "navbar"}}
+  <div class="topnav">
+    {{if .Email}}
+        <a class="active" href="/?next=home">My Home</a>
+    {{else}}
+        <a class="active" href="/home">Home</a>
+    {{end}}
+    <!-- a href="#about">About</a>
+    <a href="#contact">Contact</a -->
+
+    <div class="login-container">
+      {{if .Email}}
+      <div class="dropdown">
+        <button class="dropbtn">{{.Email}}</button>
+        <div class="dropdown-content">
+          <a href="/logout">Logout</a>
+        </div>
+      </div>
+      {{else}}
+        <a href="/login">Login</a>
+      {{end}}
+    </div>
+  </div>
+
+{{end}}
+
+{{define "page"}}<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="/resources/styles/styles.css">
+    {{template "head" .}}
+  </head>
+  <body>
+    {{template "navbar" .NavBar}}
+    {{template "body" .Body}}
+  </body>
+</html>{{end}}

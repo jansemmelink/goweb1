@@ -93,12 +93,16 @@ func (menuItem MenuItem) Validate() error {
 
 type Prompt struct {
 	Caption string `json:"caption"`
+	Name    string `json:"name"`
 	Next    string `json:"next"`
 }
 
 func (prompt Prompt) Validate() error {
 	if prompt.Caption == "" {
 		return errors.Errorf("missing caption")
+	}
+	if prompt.Name == "" {
+		return errors.Errorf("missing name")
 	}
 	if prompt.Next == "" {
 		return errors.Errorf("missing next")

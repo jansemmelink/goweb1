@@ -1,0 +1,85 @@
+{
+    "home":{
+        "menu":{
+            "title":"Piece Jobs",
+            "items":[
+                {"caption":"My Work", "next":[{"item":"my-work-menu"}]},
+                {"caption":"My Skills", "next":[{"item":"my-skills-menu"}]},
+                {"caption":"My Person", "next":[{"item":"my-person-menu"}]}
+            ]
+        }
+    },
+    "my-work-menu":{
+        "menu":{
+            "title":"My Work",
+            "items":[
+                {"caption":"Today: Paint (Observatory)", "next":[{"item":"todo"}]},
+                {"caption":"Tomorrow: Clean (Mowbray)", "next":[{"item":"todo"}]},
+                {"caption":"Monday: Clean (Mowbray)", "next":[{"item":"todo"}]},
+                {"caption":"Back", "next":[{"item":"home"}]}
+            ]
+        }
+    },
+    "my-skills-menu":{
+        "menu":{
+            "title":"My Skills",
+            "items":[
+                {"caption":"Painter", "next":[
+                    {"set":{"name":"skill-id","value":"1"}},
+                    {"set":{"name":"skill-name","value":"Painter"}},
+                    {"item":"my-skill"}
+                ]},
+                {"caption":"Cleaner", "next":[
+                    {"set":{"name":"skill-id","value":"1"}},
+                    {"set":{"name":"skill-name","value":"Cleaner"}},
+                    {"item":"my-skill"}
+                ]},
+                {"caption":"Add", "next":[
+                    {"item":"add-skill"}
+                ]},
+                {"caption":"Back", "next":[{"item":"home"}]}
+            ]
+        }
+    },
+    "my-skills-1":{
+        "menu":{
+            "title":"Painter",
+            "items":[
+                {"caption":"Delete", "next":[{"item":"delete-skill"}]}
+            ]
+        }
+    },
+    "my-person-menu":{
+        "menu":{
+            "title":"Personal Profile",
+            "items":[
+                {"caption":"Known As: {{known_as}}", "next":[
+                    {"set":{"name":"field-name","value":"known_as"}},
+                    {"item":"change-person"}
+                ]},
+                {"caption":"Phone Nr: {{phone_nr}}", "next":[
+                    {"set":{"name":"field-name","value":"phone_nr"}},
+                    {"item":"change-person"}
+                ]},
+                {"caption":"Full Name: {{full_name}}", "next":[
+                    {"set":{"name":"field-name","value":"full_name"}},
+                    {"item":"change-person"}
+                ]},
+                {"caption":"National ID: {{nat_id}}", "next":[
+                    {"set":{"name":"field-name","value":"nat_id"}},
+                    {"item":"change-person"}
+                ]}
+            ]
+        }
+    },
+    "change-person":{
+        "prompt":{
+            "caption":"Old Value: {{value}}. New Value?",
+            "name":"new_value",
+            "next":[
+                {"set":{"name":"abc", "value":"???"}},
+                {"item":"my-person-menu"}
+            ]
+        }
+    }
+}

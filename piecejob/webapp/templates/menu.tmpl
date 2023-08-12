@@ -1,0 +1,9 @@
+{{define "head"}}<title>Some Menu</title>{{end}}
+{{define "body"}}
+<div>
+  <h1>{{.Title}}</h1>
+  {{range $item := .Items}}
+		<p><a href="/?next={{$item.NextUUID}}">{{$item.Caption}}</a></p>
+  {{end}}
+</div>
+{{end}}
