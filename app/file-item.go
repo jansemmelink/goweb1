@@ -8,13 +8,34 @@ import (
 	"github.com/go-msvc/errors"
 )
 
+type AppItem interface {
+	OnEnterActions() *Actions
+	Render(ctx context.Context, buffer io.Writer) (
+		pageData *PageData,
+		err error)
+
+	//Process is called on method POST
+	//return next item or error
+	//next item is required, return own if need to stay put
+	Process(ctx context.Context, httpReq *http.Request) (string, error)
+}
+
 type fileItem struct {
+	//optional
+	OnEnter *Actions `json:"on_enter_actions,omitempty" doc:"Optional list of actions to take when entering the item"`
+
 	//union: one of the following is required
 	Menu   *fileItemMenu
 	Prompt *fileItemPrompt
 }
 
 func (i fileItem) Validate() error {
+	if i.OnEnter != nil {
+		if err := i.OnEnter.Validate(); err != nil {
+			return errors.Wrapf(err, "invalid on_enter")
+		}
+	}
+
 	count := 0
 	if i.Menu != nil {
 		if err := i.Menu.Validate(); err != nil {
@@ -36,6 +57,18 @@ func (i fileItem) Validate() error {
 	}
 	return nil
 } //fileItem.Validate()
+
+func (item fileItem) OnEnterActions() *Actions {
+	//do not return nil, else OnEnterActions().Execute() will fail
+	//rather return an empty string
+	if item.OnEnter == nil {
+		log.Debugf("OnEnter = nil")
+		return &Actions{list: []Action{}}
+	} else {
+		log.Debugf("OnEnter.list=%d", len(item.OnEnter.list))
+	}
+	return item.OnEnter
+}
 
 func (item fileItem) Render(ctx context.Context, buffer io.Writer) (*PageData, error) {
 	if item.Menu != nil {

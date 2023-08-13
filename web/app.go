@@ -78,6 +78,7 @@ func (w webApp) Run() error {
 
 	//register types stored in session data, else session save will fail
 	gob.Register(app.PageData{})
+	gob.Register(map[string]interface{}{})
 
 	//setup and start HTTP server
 	http.HandleFunc("/", w.hdlr())
@@ -147,14 +148,9 @@ func (w webApp) hdlr() func(httpRes http.ResponseWriter, httpReq *http.Request) 
 				redirect(httpRes, "failed to process input", "home", "/") //todo: retries etc...
 				return
 			}
-			nextItem, ok := w.app.GetItem(nextItemId)
-			if ok {
-				log.Debugf("Navigated to next=%s", nextItemId)
-				currentItemId = nextItemId
-				currentItem = nextItem
-			} else {
-				log.Errorf("unknown next:\"%s\"", nextItemId)
-				redirect(httpRes, "failed to process input", "home", "/") //todo: retries etc...
+			if currentItemId, currentItem, err = w.navigateTo(ctx, nextItemId); err != nil {
+				log.Errorf("failed to nav to %s: %+v", nextItemId, err)
+				redirect(httpRes, "failed to navigate", "home", "/")
 				return
 			}
 
@@ -167,10 +163,10 @@ func (w webApp) hdlr() func(httpRes http.ResponseWriter, httpReq *http.Request) 
 				//special case:
 				if nextItemUUID == "home" {
 					//reset and start over
-					nextItem, ok := w.app.GetItem(nextItemUUID) //not a uuid but a known value
-					if ok {
-						currentItem = nextItem
-						currentItemId = "home"
+					var err error
+					currentItemId, currentItem, err = w.navigateTo(ctx, "home")
+					if err != nil {
+						panic(fmt.Sprintf("failed to nav home: %+v", err))
 					}
 				} else {
 					//can only apply if page stored any links
@@ -185,13 +181,9 @@ func (w webApp) hdlr() func(httpRes http.ResponseWriter, httpReq *http.Request) 
 							} else if nextItemId != "" {
 								logSession(ctx, "after execute next steps")
 								log.Debugf("next:\"%s\"", nextItemId)
-								nextItem, ok := w.app.GetItem(nextItemId)
-								if ok {
-									log.Debugf("Navigated to next=%s", nextItemId)
-									currentItemId = nextItemId
-									currentItem = nextItem
-								} else {
-									log.Errorf("unknown next:\"%s\"", nextItemId)
+								currentItemId, currentItem, err = w.navigateTo(ctx, nextItemId)
+								if err != nil {
+									log.Errorf("failed to nav to %s: %+v", nextItemId, err)
 									redirect(httpRes, "failed to process input", "home", "/") //todo: retries etc...
 									return
 								}
@@ -321,4 +313,16 @@ func logSession(ctx context.Context, title string) {
 	for n, v := range session.Values {
 		log.Debugf("  Session[%s] = (%T)%+v", n, v, v)
 	}
+}
+
+func (w webApp) navigateTo(ctx context.Context, nextItemId string) (string, app.AppItem, error) {
+	nextItem, ok := w.app.GetItem(nextItemId)
+	if !ok || nextItem == nil {
+		return "", nil, errors.Errorf("unknown next:\"%s\"", nextItemId)
+	}
+	log.Debugf("Nav Item -> %s", nextItemId)
+	if err := nextItem.OnEnterActions().Execute(ctx); err != nil {
+		return "", nil, errors.Wrapf(err, "failed to execute on_enter_actions")
+	}
+	return nextItemId, nextItem, nil
 }

@@ -1,5 +1,12 @@
 {
     "home":{
+        "on_enter_actions":[
+            {"MySkillsListLoaded":true},
+            {"One":1},
+            {"Friend":"Attie"},
+            {"AllInfo":"{{.FullName}}, {{.PhoneNr}}"},
+            {"MySkillsList":{"loadMySkills":{"v1":"1", "v2":2}}}
+        ],
         "menu":{
             "title":{"":"Piece Jobs"},
             "items":[
@@ -21,6 +28,13 @@
         }
     },
     "my-skills-menu":{
+        "on_enter_actions":[
+            {"MySkillsListLoaded":true},
+            {"One":1},
+            {"Friend":"Attie"},
+            {"AllInfo":"{{.FullName}}, {{.PhoneNr}}"},
+            {"MySkillsList":{"loadMySkills":{"v1":"1", "v2":2}}}
+        ],
         "menu":{
             "title":{"":"My Skills"},
             "items":[
@@ -50,7 +64,9 @@
         }
     },
     "my-person-menu":{
-        "on_enter":{"func":"load_profile", "args":{"id":".NationalId"}},
+        "on_enter":[
+            {"func":"load_profile", "args":{"id":".NationalId"}}
+        ],
         "menu":{
             "title":{"":"Personal Profile"},
             "items":[
@@ -69,7 +85,8 @@
                 {"caption":{"":"National ID: {{.NatId}}"}, "next":[
                     {"set":{"name":"FieldName","value":"NatId"}},
                     {"item":"change-person"}
-                ]}
+                ]},
+                {"caption":{"":"Back"}, "next":[{"item":"home"}]}
             ]
         }
     },

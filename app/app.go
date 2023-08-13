@@ -3,8 +3,7 @@ package app
 import (
 	"context"
 	"encoding/json"
-	"io"
-	"net/http"
+	"fmt"
 	"os"
 	"regexp"
 
@@ -12,18 +11,33 @@ import (
 )
 
 type App interface {
+	RegisterFunc(name string, appFunc AppFunc)
 	Load(filename string) error
 	GetItem(id string) (AppItem, bool)
 }
 
+type AppFunc func(ctx context.Context, args map[string]interface{}) error
+
 func New() App {
 	return &app{
+		funcs: map[string]AppFunc{},
 		items: map[string]AppItem{},
 	}
 }
 
 type app struct {
+	funcs map[string]AppFunc
 	items map[string]AppItem
+}
+
+func (app *app) RegisterFunc(name string, appFunc AppFunc) {
+	if _, ok := app.funcs[name]; ok {
+		panic(fmt.Sprintf("register func %s() already registered", name))
+	}
+	if appFunc == nil {
+		panic(fmt.Sprintf("register func %s() is nil", name))
+	}
+	app.funcs[name] = appFunc
 }
 
 func (app *app) Load(filename string) error {
@@ -57,17 +71,6 @@ func (app *app) GetItem(id string) (AppItem, bool) {
 	}
 	return item, true
 } //app.GetItem()
-
-type AppItem interface {
-	Render(ctx context.Context, buffer io.Writer) (
-		pageData *PageData,
-		err error)
-
-	//Process is called on method POST
-	//return next item or error
-	//next item is required, return own if need to stay put
-	Process(ctx context.Context, httpReq *http.Request) (string, error)
-}
 
 type CtxSession struct{}
 type CtxPageData struct{}

@@ -27,3 +27,5 @@
 
 - merge multiple JSON files and go packages into one app for modularity
 
+- extend to cover long running processes by calling external services as consumer/producers
+
