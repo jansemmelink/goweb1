@@ -1,5 +1,30 @@
 {
     "home":{
+        "next":[
+            {"set":{"name":"X", "value":"1"}},
+            {"if":{
+                "expr":"NationalId==''",
+                "then":[
+                    {"set":{"name":"X", "value":"2"}},
+                    {"item":"get-nat-id"}
+                ],
+                "else":[
+                    {"set":{"name":"X", "value":"4"}},
+                    {"item":"home2"}
+                ]
+            }}
+        ]
+    },
+    "get-nat-id":{
+        "prompt":{
+            "caption":{"":"National ID"},
+            "name":"NationalId",
+            "next":[
+                {"item":"home2"}
+            ]
+        }
+    },
+    "home2":{
         "menu":{
             "title":{"":"Piece Jobs"},
             "items":[
@@ -7,7 +32,7 @@
                 {"caption":{"":"My Skills List (new)"}, "next":[{"item":"my-skills-list"}]},
                 {"caption":{"":"My Jobs List (new)"}, "next":[{"item":"my-jobs-list"}]},
                 {"caption":{"":"My Skills Menu (old)"}, "next":[{"item":"my-skills-menu"}]},
-                {"caption":{"":"My Person"}, "next":[{"item":"my-person-menu"}]}
+                {"caption":{"":"My Profile (new)"}, "next":[{"item":"profile"}]}
             ]
         }
     },
@@ -53,7 +78,8 @@
                     {"header":{"":"Date"}, "value":{"":"{{.Date}}"}},
                     {"header":{"":"Type"}, "value":{"":"{{.Type}}"}}],
                 "item_set":"Job",
-                "item_next":[{"item":"job-menu"}]
+                "__item_next":[{"item":"job-menu"}],
+                "item_next":[{"item":"job-edit"}]
             },
             "operations":[
                 {"caption":{"":"Add Job"}, "next":[
@@ -75,6 +101,15 @@
                 ]},
                 {"caption":{"":"Back"}, "next":[{"item":"my-jobs-list"}]}
             ]
+        }
+    },
+    "job-edit":{
+        "edit":{
+            "title":{"":"Job"},
+            "get_func":"getJob",
+            "get_arg_name":"Job.Id",
+            "upd_func":"updJob",
+            "saved_next":[{"item":"my-jobs-list"}]
         }
     },
     "my-skills-menu":{
@@ -109,41 +144,13 @@
             ]
         }
     },
-    "my-person-menu":{
-        "on_enter_actions":[
-            {"Profile":{"getProfile":{"id":".NationalId"}}}
-        ],
-        "menu":{
-            "title":{"":"Personal Profile"},
-            "items":[
-                {"caption":{"":"Known As: {{.KnownAs}}"}, "next":[
-                    {"set":{"name":"FieldName","value":"KnownAs"}},
-                    {"item":"change-person"}
-                ]},
-                {"caption":{"":"Phone Nr: {{.PhoneNr}}"}, "next":[
-                    {"set":{"name":"FieldName","value":"PhoneNr"}},
-                    {"item":"change-person"}
-                ]},
-                {"caption":{"":"Full Name: {{.FullName}}"}, "next":[
-                    {"set":{"name":"FieldName","value":"FullName"}},
-                    {"item":"change-person"}
-                ]},
-                {"caption":{"":"National ID: {{.NatId}}"}, "next":[
-                    {"set":{"name":"FieldName","value":"NatId"}},
-                    {"item":"change-person"}
-                ]},
-                {"caption":{"":"Save"}, "next":[{"item":"NYI"}]},
-                {"caption":{"":"Back"}, "next":[{"item":"home"}]}
-            ]
-        }
-    },
-    "change-person":{
-        "prompt":{
-            "caption":{"":"Old Value: {{.OldValue}}. New Value?"},
-            "name":"{{.FieldName}}",
-            "next":[
-                {"item":"my-person-menu"}
-            ]
+    "profile":{
+        "edit":{
+            "title":{"":"Profile"},
+            "get_func":"getProfile",
+            "get_arg_name":"NationalId",
+            "upd_func":"updProfile",
+            "saved_next":[{"item":"home"}]
         }
     }
 }

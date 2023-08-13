@@ -62,6 +62,8 @@ func (actions *Actions) UnmarshalJSON(value []byte) error {
 				for funcName, funcReq = range actionObj {
 					//do nothing
 				}
+				log.Debugf("funcName(%s) funcReq((%T)%+v)", funcName, funcReq, funcReq)
+
 				//function name resolution is done in the app - not accessible here
 				//if name ends with "()" then it is a func name
 				if len(funcName) > 2 && strings.HasSuffix(funcName, "()") {
@@ -101,7 +103,7 @@ type actionFunc struct {
 }
 
 func (f *actionFunc) Validate(app App) error {
-	if !fieldNameRegex.MatchString(f.set) {
+	if f.set != "" && !fieldNameRegex.MatchString(f.set) { //may be empty when not storing anything, e.g. func has no result value
 		return errors.Errorf("invalid field name \"%s\"", f.set)
 	}
 	if f.name == "" {
@@ -121,7 +123,14 @@ func (f actionFunc) Execute(ctx context.Context) error {
 	}
 	if f.fnc.reqType != nil {
 		//todo: execute req templates into a value... for now just static value as configured
+		log.Debugf("f.req: (%T)%+v", f.req, f.req)
+		if tmplStr, ok := f.req.(string); ok {
+			tmpl := ConfiguredTemplate{UnparsedTemplate: tmplStr}
+			session := ctx.Value(CtxSession{}).(*sessions.Session)
+			tmpl.Rendered(sessionData(session))
+		}
 		jsonReq, _ := json.Marshal(f.req)
+		log.Debugf("jsonReq: %s", string(jsonReq))
 		reqValuePtr := reflect.New(f.fnc.reqType)
 		if err := json.Unmarshal(jsonReq, reqValuePtr.Interface()); err != nil {
 			return errors.Wrapf(err, "failed to parse %s() req into %v", f.name, f.fnc.reqType)

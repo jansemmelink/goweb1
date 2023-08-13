@@ -11,7 +11,8 @@ import (
 type AppItem interface {
 	OnEnterActions() *Actions
 	Render(ctx context.Context, buffer io.Writer) (
-		pageData *PageData,
+		nextItemId string, //only for redirect
+		pageData *PageData, //only when ready to display
 		err error)
 
 	//Process is called on method POST
@@ -25,9 +26,11 @@ type item struct {
 	OnEnter *Actions `json:"on_enter_actions,omitempty" doc:"Optional list of actions to take when entering the item"`
 
 	//union: one of the following is required
-	Menu   *menu
-	Prompt *prompt
-	List   *list
+	Menu   *menu         `json:"menu"`
+	Prompt *prompt       `json:"prompt"`
+	List   *list         `json:"list"`
+	Edit   *edit         `json:"edit"`
+	Next   *fileItemNext `json:"next" doc:"A series of actions to get to next"`
 }
 
 func (i item) Validate(app App) error {
@@ -56,8 +59,20 @@ func (i item) Validate(app App) error {
 		}
 		count++
 	}
+	if i.Edit != nil {
+		if err := i.Edit.Validate(app); err != nil {
+			return errors.Wrapf(err, "invalid edit")
+		}
+		count++
+	}
+	if i.Next != nil {
+		if err := i.Next.Validate(); err != nil {
+			return errors.Wrapf(err, "invalid next")
+		}
+		count++
+	}
 	if count == 0 {
-		return errors.Errorf("missing menu|prompt|list|...")
+		return errors.Errorf("missing menu|prompt|list|edit|...")
 	}
 	if count > 1 {
 		return errors.Errorf("has %d instead of 1 of menu|prompt|list|...", count)
@@ -77,17 +92,45 @@ func (item item) OnEnterActions() *Actions {
 	return item.OnEnter
 }
 
-func (item item) Render(ctx context.Context, buffer io.Writer) (*PageData, error) {
+func (item item) Render(ctx context.Context, buffer io.Writer) (string, *PageData, error) {
 	if item.Menu != nil {
-		return item.Menu.Render(ctx, buffer)
+		if pageData, err := item.Menu.Render(ctx, buffer); err != nil {
+			return "", nil, err
+		} else {
+			return "", pageData, nil
+		}
 	}
 	if item.Prompt != nil {
-		return item.Prompt.Render(ctx, buffer)
+		if pageData, err := item.Prompt.Render(ctx, buffer); err != nil {
+			return "", nil, err
+		} else {
+			return "", pageData, nil
+		}
 	}
 	if item.List != nil {
-		return item.List.Render(ctx, buffer)
+		if pageData, err := item.List.Render(ctx, buffer); err != nil {
+			return "", nil, err
+		} else {
+			return "", pageData, nil
+		}
 	}
-	return nil, errors.Errorf("cannot render %+v", item)
+	if item.Edit != nil {
+		if pageData, err := item.Edit.Render(ctx, buffer); err != nil {
+			return "", nil, err
+		} else {
+			return "", pageData, nil
+		}
+	}
+
+	if item.Next != nil {
+		//next sets the next item which should be rendered
+		nextItemId, err := item.Next.Execute(ctx)
+		if err != nil {
+			return "", nil, errors.Wrapf(err, "failed to execute action to determine next item")
+		}
+		return nextItemId, nil, nil //redirect
+	}
+	return "", nil, errors.Errorf("cannot render %+v", item)
 }
 
 func (item item) Process(ctx context.Context, httpReq *http.Request) (string, error) {
@@ -102,6 +145,9 @@ func (item item) Process(ctx context.Context, httpReq *http.Request) (string, er
 	// }
 	if item.Prompt != nil {
 		return item.Prompt.Process(ctx, httpReq)
+	}
+	if item.Edit != nil {
+		return item.Edit.Process(ctx, httpReq)
 	}
 	return "", errors.Errorf("cannot process %+v", item)
 }

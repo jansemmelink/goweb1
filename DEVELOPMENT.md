@@ -7,13 +7,40 @@
     - list supports operations at the bottom
     - list.item selection opens the item
     - tabular display is working needed
+- added edit
+    - get works and pass in national id
+    - save works without id because it gets it from the struct
+    - cancel not yet working to go back
+- added action at the start to check of profile has a nat id
+    then go to either ask for it or straight home
+    note the profile is in memory, so fetch profile(nat_id) succeeds with blank other fields
+    but can be saved until server is restarted - in memory...
+    so ok, that works, just need to store profile externally, also jobs, skills etc...
+- edit linked to job list as well
 
 # Busy With #
-- module to get/edit/save with user struct types from get/set func
+- need a back-end now for continuation
+- handle session closure/expiry/not found and auth and test multi-user
+- get ASAP to working viable product and see if can run in cloud... even with some things still broken
+- test continuation behind router like nginx with two instances
+
+- edit save empty values seems to break it... (leave any field empty in profile...)
+
+- edit cancel not yet working
+- handle [Cancel] from editor, may be javascript to do something?
+
+- need control over what can be edited - ensure profile does not change NatId for example...
+    and job must show some fields and edit only description for example
+
+- editor also need option to view not in form or view in form but read only all fields
+    and enable/disable edit when nothing changed
+    and implement validation rules with active javascript feedback (may be in react)
+
+- consider using jq instead of template to extract session values for func req etc...?
+    and pass value as interface{} always then func can assert it has required type and extract fields as needed
 
 # Bugs #
 - When from menu click on something that fail, then something that works, click browser back to menu, then all clicks on menu go to last thing that worked... something wierd...
-
 - session data keeps growing, e.g. when list is displayed again and again, more uuid added... need way to scope and cleanup page specific data including links and Item<uuid> must also be temporary
 
 # Todo #
