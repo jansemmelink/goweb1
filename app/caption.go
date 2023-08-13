@@ -59,14 +59,14 @@ func (ct ConfiguredTemplate) Rendered(data interface{}) string {
 		var err error
 		ct.tmpl, err = template.New("tmpl").Parse(ct.UnparsedTemplate)
 		if err != nil {
-			panic(fmt.Sprintf("tmpl is nil: failed to parse: %+v", err))
+			panic(fmt.Sprintf("failed template.parse(%s): %+v", ct.UnparsedTemplate, err))
 		}
 	}
 	if err := ct.tmpl.Execute(buf, data); err != nil {
 		log.Errorf("failed to render: %+v", err) //need context...
 		return ""
 	}
-	log.Debugf("tmpl(%s) with (%T)%+v -> \"%s\"", ct.UnparsedTemplate, data, data, string(buf.Bytes()))
+	//log.Debugf("tmpl(%s) with (%T)%+v -> \"%s\"", ct.UnparsedTemplate, data, data, string(buf.Bytes()))
 	return string(buf.Bytes())
 }
 

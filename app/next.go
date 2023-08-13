@@ -28,9 +28,10 @@ func (next fileItemNext) Execute(ctx context.Context) (nextItemId string, err er
 	session := ctx.Value(CtxSession{}).(*sessions.Session)
 	for stepIndex, step := range next {
 		if step.Set != nil {
+			log.Debugf("next SET: %+v", step.Set)
 			name := step.Set.Name.Rendered(sessionData(session))
 			if !fieldNameRegex.MatchString(name) {
-				return "", errors.Wrapf(err, "step[%d].name.render(%s) invalid", stepIndex, name)
+				return "", errors.Wrapf(err, "step[%d].name=\"%s\" is invalid fieldname (expecting CamelCase)", stepIndex, name)
 			}
 			value := step.Set.Value.Rendered(sessionData(session))
 			log.Debugf("SET(%s)=\"%s\"", name, value)
@@ -38,6 +39,7 @@ func (next fileItemNext) Execute(ctx context.Context) (nextItemId string, err er
 			continue
 		}
 		if step.Item != nil {
+			log.Debugf("next ITEM: %+v", step.Set)
 			return string(*step.Item), nil
 		}
 		return "", errors.Errorf("unhandled next step[%d] %T", stepIndex, step)

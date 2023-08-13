@@ -15,7 +15,7 @@ type list struct {
 	Title      Caption     `json:"title"`
 	GetItems   *Actions    `json:"get_items" doc:"Actions to execute to make items. It must have an item that sets \"Items\"."`
 	Options    ListOptions `json:"options" doc:"Options to manipulate the display and behavior of the list"`
-	Operations []menuItem  `json:"list_operations"`
+	Operations []menuItem  `json:"operations"`
 }
 
 func (list list) Validate(app App) error {
@@ -40,14 +40,16 @@ func (list list) Validate(app App) error {
 } //list.Validate()
 
 type ListOptions struct {
-	Caption    Caption  `json:"item_caption"`
-	ShowFilter bool     `json:"show_filter"`
-	SortFields []string `json:"sort_fields"`
-	Limit      int      `json:"limit"`
+	ItemCaption Caption      `json:"item_caption"`
+	ItemSet     string       `json:"item_set" doc:"When select, store item column values in this name"`
+	ItemNext    fileItemNext `json:"item_next"`
+	ShowFilter  bool         `json:"show_filter"`
+	SortFields  []string     `json:"sort_fields"`
+	Limit       int          `json:"limit"`
 }
 
 func (o ListOptions) Validate() error {
-	if err := o.Caption.Validate(false); err != nil {
+	if err := o.ItemCaption.Validate(false); err != nil {
 		return errors.Wrapf(err, "invalid/blank item_caption")
 	}
 	if o.Limit < 0 {
@@ -90,19 +92,23 @@ func (list list) Render(ctx context.Context, buffer io.Writer) (*PageData, error
 
 	log.Debugf("%d columns with %d items to render", len(columnList.Columns), len(columnList.Items))
 	//add list items
+	sessionItems := map[string]ColumnItem{}
 	for itemIndex, item := range columnList.Items {
 		//item caption is templated from item data
-		caption, err := list.Options.Caption.Render(lang, item)
+		caption, err := list.Options.ItemCaption.Render(lang, item)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to render item caption")
 		}
 		uuid := uuid.New().String()
+		sessionItems[uuid] = item
 		log.Debugf("  item[%d]: %+v -> caption:\"%s\" -> %s", itemIndex, item, caption, uuid)
 
-		//next is the same for all item except it sets the item identifier
-		//to be used by other steps in next or the next page to be displayed
-		//todo:...
-		// pageData.Links[uuid] = .Next
+		//next is the same for all item except it sets the selected item value as well
+		pageData.Links[uuid] = append(fileItemNext{
+			fileItemNextStep{Set: &fileItemSet{
+				Name:  ConfiguredTemplate{UnparsedTemplate: list.Options.ItemSet},
+				Value: ConfiguredTemplate{UnparsedTemplate: fmt.Sprintf("{{index .Items \"%s\"}}", uuid)}}},
+		}, list.Options.ItemNext...)
 
 		listTmplData.Items = append(listTmplData.Items,
 			tmplDataForListItem{
@@ -110,6 +116,7 @@ func (list list) Render(ctx context.Context, buffer io.Writer) (*PageData, error
 				NextUUID: uuid,
 			})
 	}
+	session.Values["Items"] = sessionItems
 
 	//add list operations
 	for _, oper := range list.Operations {
@@ -119,11 +126,12 @@ func (list list) Render(ctx context.Context, buffer io.Writer) (*PageData, error
 		}
 		uuid := uuid.New().String()
 		pageData.Links[uuid] = oper.Next
-		listTmplData.Operations = append(listTmplData.Operations,
-			tmplDataForListOperation{
-				Caption:  caption,
-				NextUUID: uuid,
-			})
+		operTmpl := tmplDataForListOperation{
+			Caption:  caption,
+			NextUUID: uuid,
+		}
+		listTmplData.Operations = append(listTmplData.Operations, operTmpl)
+		log.Debugf("Added operation: %+v", operTmpl)
 	}
 
 	tmplData := TmplData{

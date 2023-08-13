@@ -13,6 +13,11 @@ require (
 )
 
 require (
+	github.com/go-redis/redis v6.15.5+incompatible // indirect
+	github.com/rbcervilla/redisstore v1.1.0 // indirect
+)
+
+require (
 	github.com/google/uuid v1.3.0
 	github.com/mattn/go-sqlite3 v1.14.17 // indirect
 	github.com/michaeljs1990/sqlitestore v0.0.0-20210507162135-8585425bc864

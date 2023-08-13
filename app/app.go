@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -28,6 +29,15 @@ type AppFunc struct {
 	reqType   reflect.Type
 	resType   reflect.Type
 	funcValue reflect.Value
+}
+
+func init() {
+	//register types stored in session data, else session save will fail
+	gob.Register(PageData{})
+	gob.Register(map[string]interface{}{})
+	gob.Register(ColumnList{})
+	gob.Register(ColumnItem{})
+	gob.Register(map[string]ColumnItem{})
 }
 
 func New() App {

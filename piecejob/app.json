@@ -53,7 +53,9 @@
             "options":{
                 "filter":true,
                 "sort":true,
-                "item_caption":{"":"{{.Date}}/{{.Type}}"}
+                "item_caption":{"":"{{.Date}}/{{.Type}}"},
+                "item_set":"Job",
+                "item_next":[{"item":"job-menu"}]
             },
             "operations":[
                 {"caption":{"":"Add Job"}, "next":[
@@ -61,6 +63,20 @@
                 ]},
                 {"caption":{"":"Back"}, "next":[{"item":"home"}]}
             ]            
+        }
+    },
+    "job-menu":{
+        "menu":{
+            "title":{"":"Job: {{.Job}}"},
+            "items":[
+                {"caption":{"":"Date: {{.Job.Date}}"}, "next":[
+                    {"item":"job-menu"}
+                ]},
+                {"caption":{"":"Type: {{.Job.Type}}"}, "next":[
+                    {"item":"job-menu"}
+                ]},
+                {"caption":{"":"Back"}, "next":[{"item":"my-jobs-list"}]}
+            ]
         }
     },
     "my-skills-menu":{

@@ -1,20 +1,31 @@
 # Progress #
 - added on_enter_actions which can call functions, getMySkills() returns hard coded list
+- switched to redis session store because sqlite limited size and ran out
+- added list display for skills and jobs
+    - loads list of items when display/refresh
+    - item has caption
+    - list supports operations at the bottom
+    (displayed, but links to items not yet working)
 
 # Busy With #
+- session data got too long to save in default sqllite store...
+
 - list display (not menu)
-    - caption template can display []string or fields from []struct
+    - make item links work...!!!
     - change sort order
     - filter on part of caption
     - limit display
-    - list operations like add new item, or send to all, etc...
-    need ability to load list each time rendered
 
 # Bug #
 - When from menu click on something that fail, then something that works, click browser back to menu, then all clicks on menu go to last thing that worked... something wierd...
 
+- session data keeps growing, e.g. when list is displayed again and again, more uuid added... need way to scope and cleanup page specific data including links and Item<uuid> must also be temporary
+
 # Todo #
 - app custom display modules, like list and menu and prompt... but allow app to register own modules, need to register them as item types, instead of hard coded item struct at moment... see how action was done.
+
+- move templates into app to be generic and let use change them
+- add default style sheet and extend with custom style sheets
 
 - try not to build a back-end yet... will be useful to make react app later, but for
     now the aim is exactly the opposit, i.e. to make an app quickly standalone
@@ -23,7 +34,12 @@
 - make user id accessible to functions, e.g. national id to call backend
 - template resolve inside action function args and set...
 
+- indicate unused JSON attributes when parsing the app file to avoid surprises and things not being applied
+
+- let session expire and inform user and implement user register/login/auth, but still allow display of some pages without auth and indicate when auth is needed
+
 - imply and show back option on all menus but give option to disable it
+- all session data must be stacked between item nav so that back will drop some values and restore old values
 - pass named params to user functions - not directly retrieve session data
     - so function can iterated over lists etc...
 

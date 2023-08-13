@@ -3,18 +3,18 @@ package web
 import (
 	"bytes"
 	"context"
-	"encoding/gob"
 	"fmt"
 	"net/http"
 	"os"
 
 	"github.com/go-msvc/errors"
 	"github.com/go-msvc/logger"
+	"github.com/go-redis/redis"
 	"github.com/google/uuid"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/jansemmelink/goweb1/app"
-	"github.com/michaeljs1990/sqlitestore"
+	"github.com/rbcervilla/redisstore"
 )
 
 var log = logger.New().WithLevel(logger.LevelDebug)
@@ -55,7 +55,7 @@ type webApp struct {
 	hashKey      []byte
 	blockKey     []byte
 	cookieCutter securecookie.Codec
-	sessionStore *sqlitestore.SqliteStore
+	sessionStore sessions.Store
 }
 
 func (w webApp) Run() error {
@@ -70,15 +70,37 @@ func (w webApp) Run() error {
 	//todo: option to replace default local session store in prod
 	//for prod e.g., replace this e.g. with dynamo db like
 	//see https://github.com/gorilla/sessions for list of options
-	var err error
-	w.sessionStore, err = sqlitestore.NewSqliteStore("./database", "sessions", "/", 3600, []byte("<SecretKey>"))
+
+	//-======  sqlite  =======-
+	// if false {
+	// 	var err error
+	// 	w.sessionStore, err = sqlitestore.NewSqliteStore(
+	// 		"./database",
+	// 		"sessions",
+	// 		"/",
+	// 		3600,
+	// 		[]byte("<SecretKey>"))
+	// 	if err != nil {
+	// 		return errors.Wrapf(err, "failed to create session store")
+	// 	}
+	// } else {
+	client := redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+	})
+	store, err := redisstore.NewRedisStore(client)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create session store")
+		panic(fmt.Sprintf("failed to create redis store: %+v", err))
 	}
 
-	//register types stored in session data, else session save will fail
-	gob.Register(app.PageData{})
-	gob.Register(map[string]interface{}{})
+	// Example changing configuration for sessions
+	store.KeyPrefix("session_")
+	store.Options(sessions.Options{
+		Path:   "/",
+		Domain: "example.com",
+		MaxAge: 86400 * 60,
+	})
+	w.sessionStore = store
+	// } //scope
 
 	//setup and start HTTP server
 	http.HandleFunc("/", w.hdlr())
@@ -228,14 +250,32 @@ func (w webApp) hdlr() func(httpRes http.ResponseWriter, httpReq *http.Request) 
 		}
 		//update and save session data
 		session.Values["current_item"] = currentItemId
+
 		if err := session.Save(httpReq, httpRes); err != nil {
-			log.Errorf("failed to save session: %+v", err)
+			panic(fmt.Sprintf("failed to save session: %+v", err))
 		} else {
 			log.Debugf("Saved Session(%d values, id:%s, name:%s):", len(session.Values), session.ID, session.Name())
 			for n, v := range session.Values {
 				log.Debugf("  Session[%s] = (%T)%+v", n, v, v)
 			}
 		}
+
+		// //verify saved:
+		// {
+		// 	s, err := w.sessionStore.Get(httpReq, session.Name())
+		// 	if err != nil {
+		// 		log.Errorf("failed to get session(%s) data: %+v", session.Name(), err)
+		// 	} else {
+		// 		log.Debugf("Loaded Session(%s) (%d values, id:%s, name:%s):", session.Name(), len(s.Values), s.ID, s.Name())
+		// 		for n, v := range s.Values {
+		// 			log.Debugf("  Session[%s] = (%T)%+v", n, v, v)
+		// 		}
+		// 	}
+
+		// 	if len(s.Values) != len(session.Values) {
+		// 		panic("NOT LOADED AFTER SAVE")
+		// 	}
+		// }
 
 		//encode updated cookie value into the response
 		//(written to httpRes before content)
@@ -284,7 +324,7 @@ func (w webApp) userContext(httpReq *http.Request) context.Context {
 	if err != nil {
 		log.Errorf("failed to get session data: %+v", err)
 	} else {
-		log.Debugf("Loaded Session(%d values, id:%s, name:%s):", len(session.Values), session.ID, session.Name())
+		log.Debugf("Loaded Session(%s) (%d values, id:%s, name:%s):", clientData.DeviceID, len(session.Values), session.ID, session.Name())
 		for n, v := range session.Values {
 			log.Debugf("  Session[%s] = (%T)%+v", n, v, v)
 		}
@@ -327,6 +367,15 @@ func (w webApp) navigateTo(ctx context.Context, nextItemId string) (string, app.
 		return "", nil, errors.Errorf("unknown next:\"%s\"", nextItemId)
 	}
 	log.Debugf("Nav Item -> %s", nextItemId)
+
+	if nextItemId == "home" {
+		session := ctx.Value(app.CtxSession{}).(*sessions.Session)
+		for n := range session.Values {
+			delete(session.Values, n)
+		}
+		log.Debugf("cleared the session")
+	}
+
 	if err := nextItem.OnEnterActions().Execute(ctx); err != nil {
 		return "", nil, errors.Wrapf(err, "failed to execute on_enter_actions")
 	}
