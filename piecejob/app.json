@@ -1,5 +1,14 @@
 {
     "home":{
+        "prompt":{
+            "caption":{"":"National ID"},
+            "name":"NationalId",
+            "next":[
+                {"item":"home2"}
+            ]
+        }
+    },
+    "home2":{
         "menu":{
             "title":{"":"Piece Jobs"},
             "items":[
@@ -112,7 +121,7 @@
     },
     "my-person-menu":{
         "on_enter_actions":[
-            {"Profile":{"getProfile":{"id":".NationalId"}}}
+            {"Profile":{"getProfile()":"{{.NationalId}}"}}
         ],
         "menu":{
             "title":{"":"Personal Profile"},
@@ -150,9 +159,8 @@
     "profile":{
         "edit":{
             "title":{"":"Profile"},
-            "get_actions":[
-                {"Item":{"getProfile()":{}}}
-            ],
+            "get_func":"getProfile",
+            "get_arg_name":"NationalId",
             "upd_func":"updProfile",
             "saved_next":[{"item":"home"}]
         }

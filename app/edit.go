@@ -15,9 +15,11 @@ import (
 )
 
 type edit struct {
-	Title       Caption  `json:"title"`
-	GetActions  *Actions `json:"get_actions" doc:"Actions to execute to get the item. It must have an item that sets \"Item\"."`
-	UpdFuncName string   `json:"upd_func" doc:"Func to save item"`
+	Title       Caption `json:"title"`
+	GetFuncName string  `json:"get_func" doc:"Func to get item"`
+	GetArgName  string  `json:"get_arg_name" doc:"Session value to pass into get func"`
+	getFunc     *AppFunc
+	UpdFuncName string `json:"upd_func" doc:"Func to save item"`
 	updFunc     *AppFunc
 	SavedNext   fileItemNext `json:"saved_next"`
 }
@@ -26,13 +28,10 @@ func (edit *edit) Validate(app App) error {
 	if err := edit.Title.Validate(false); err != nil {
 		return errors.Wrapf(err, "invalid title")
 	}
-	if edit.GetActions == nil {
-		return errors.Errorf("missing get_actions")
-	}
-	if err := edit.GetActions.Validate(app); err != nil {
-		return errors.Wrapf(err, "invalid get_actions")
-	}
 	var ok bool
+	if edit.getFunc, ok = app.FuncByName(edit.GetFuncName); !ok {
+		return errors.Errorf("missing/unknown get_func:\"%s\"", edit.GetFuncName)
+	}
 	if edit.updFunc, ok = app.FuncByName(edit.UpdFuncName); !ok {
 		return errors.Errorf("missing/unknown upd_func:\"%s\"", edit.UpdFuncName)
 	}
@@ -48,18 +47,30 @@ func (edit edit) Render(ctx context.Context, buffer io.Writer) (*PageData, error
 
 	//clear item and then call actions to fetch item
 	delete(session.Values, "Item")
-	if err := edit.GetActions.Execute(ctx); err != nil {
-		return nil, errors.Wrapf(err, "failed to get item")
+	//call get function
+	args := []reflect.Value{
+		reflect.ValueOf(ctx),
 	}
-	//items must be struct
-	item, ok := session.Values["Item"]
-	if !ok {
-		return nil, errors.Errorf("Item not defined get get_actions")
+	if edit.GetArgName != "" {
+		req, ok := session.Values[edit.GetArgName]
+		if !ok {
+			return nil, errors.Errorf("get_func(req:%s) not defined", edit.GetArgName)
+		}
+		args = append(args, reflect.ValueOf(req))
 	}
-
+	results := edit.getFunc.funcValue.Call(args)
+	errValue := results[len(results)-1]
+	if !errValue.IsNil() {
+		return nil, errors.Wrapf(errValue.Interface().(error), "failed to get item")
+	}
+	if len(results) != 2 {
+		return nil, errors.Errorf("get_func(%s) does not return a value", edit.GetFuncName)
+	}
+	item := results[0].Interface()
 	//todo: need way to register custom types else they cannot be stored in profile
 	//this might be expensive... not sure
 	gob.Register(item)
+	session.Values["Item"] = item //used by Process() to get type
 
 	log.Debugf("Editor for %T", item)
 	structType := reflect.TypeOf(item)
@@ -95,49 +106,6 @@ func (edit edit) Render(ctx context.Context, buffer io.Writer) (*PageData, error
 		}
 		editTmplData.Fields = append(editTmplData.Fields, fieldData)
 	}
-
-	// //add list items
-	// sessionItems := map[string]ColumnItem{}
-	// for itemIndex, item := range columnList.Items {
-
-	// 	//render each column value
-	// 	for colIndex, col := range list.Options.Columns {
-	// 		caption, err := col.Value.Render(lang, item)
-	// 		if err != nil {
-	// 			return nil, errors.Wrapf(err, "failed to render item[%d] caption for col[%d]", itemIndex, colIndex)
-	// 		}
-	// 		itemData.ColumnValues = append(itemData.ColumnValues, caption)
-	// 	}
-	// 	sessionItems[uuid] = item
-	// 	log.Debugf("  item[%d]: %+v -> %+v -> %s", itemIndex, item, itemData.ColumnValues, uuid)
-
-	// 	//next is the same for all item except it sets the selected item value as well
-	// 	pageData.Links[uuid] = append(fileItemNext{
-	// 		fileItemNextStep{Set: &fileItemSet{
-	// 			Name: ConfiguredTemplate{UnparsedTemplate: list.Options.ItemSet},
-	// 			//Value: ConfiguredTemplate{UnparsedTemplate: fmt.Sprintf("{{index .Items \"%s\"}}", uuid)}}},
-	// 			ValueStr: "Items[" + uuid + "]",
-	// 		}}}, list.Options.ItemNext...)
-
-	// 	listTmplData.Items = append(listTmplData.Items, itemData)
-	// }
-	//session.Values["Items"] =
-
-	// //add list operations
-	// for _, oper := range list.Operations {
-	// 	caption, err := oper.Caption.Render(lang, sessionData(session))
-	// 	if err != nil {
-	// 		return nil, errors.Wrapf(err, "failed to render operation caption")
-	// 	}
-	// 	uuid := uuid.New().String()
-	// 	pageData.Links[uuid] = oper.Next
-	// 	operTmpl := tmplDataForListOperation{
-	// 		Caption:  caption,
-	// 		NextUUID: uuid,
-	// 	}
-	// 	listTmplData.Operations = append(listTmplData.Operations, operTmpl)
-	// 	log.Debugf("Added operation: %+v", operTmpl)
-	// }
 
 	{
 		log.Debugf("editTmplData: %+v", editTmplData)

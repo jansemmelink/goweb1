@@ -2,6 +2,7 @@ package piecejob
 
 import (
 	"context"
+	"regexp"
 
 	"github.com/go-msvc/errors"
 	"github.com/go-msvc/logger"
@@ -72,34 +73,47 @@ func listOfJobs(ctx context.Context) (app.ColumnList, error) {
 	}, nil
 }
 
-var profiles = map[string]Profile{
-	"1": {
-		Name: "Hans",
-		Dob:  "5 Feb",
-		ID:   "123",
-	},
-	"2": {
-		Name: "James",
-		Dob:  "10 Mar",
-		ID:   "456",
-	},
-}
+// profile keyed on national id
+var profiles = map[string]Profile{}
 
 type Profile struct {
-	Name string
-	Dob  string `label:"Date of birth"`
-	ID   string `label:"National ID"`
+	NatId string
+	Name  string
+	Dob   string `label:"Date of birth"`
+	ID    string `label:"National ID"`
 }
 
-func getProfile(ctx context.Context) (Profile, error) {
-	//todo: need to get id in req
-	log.Debugf("Retrieved profile:%+v", profiles["1"])
-	return profiles["1"], nil
+func (p Profile) Validate() error {
+	if !natIdRegex.MatchString(p.NatId) {
+		return errors.Errorf("invalid natId(%s)", p.NatId)
+	}
+	return nil
+} //Profile.Validate()
+
+const natIdPattern = `[0-9]{13}`
+
+var natIdRegex = regexp.MustCompile("^" + natIdPattern + "$")
+
+func getProfile(ctx context.Context, natId string) (Profile, error) {
+	if !natIdRegex.MatchString(natId) {
+		return Profile{}, errors.Errorf("invalid natId=\"%s\"", natId)
+	}
+	p, ok := profiles[natId]
+	if !ok {
+		return Profile{
+			NatId: natId,
+		}, nil
+	}
+	log.Debugf("Retrieved profile(%s):%+v", natId, p)
+	return p, nil
 }
 
-func updProfile(ctx context.Context, profile Profile) error {
+func updProfile(ctx context.Context, p Profile) error {
+	if err := p.Validate(); err != nil {
+		return errors.Wrapf(err, "invalid profile")
+	}
 	//todo: need to get id in req
-	log.Debugf("Saving profile:%+v", profile)
-	profiles["1"] = profile
+	log.Debugf("Saving profile:%+v", p)
+	profiles[p.NatId] = p
 	return nil
 }

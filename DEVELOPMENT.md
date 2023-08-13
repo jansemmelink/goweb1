@@ -7,9 +7,35 @@
     - list supports operations at the bottom
     - list.item selection opens the item
     - tabular display is working needed
+- added edit
+    - get works without id, but busy figuring out how to pass args to get func
+    - save works without id - should anyway get id from internal
+    - cancel not yet working to go back
 
 # Busy With #
-- module to get/edit/save with user struct types from get/set func
+- editormodule to get/edit/save with user struct types from get/set func
+    editor can now edit profile,
+    editor must also be able to work on list selection when Item is already defined by list.
+        but item then is map... not struct.
+
+- editor must get with id, e.g. profile[id]
+    with two concurrent windows, not yet separated
+
+- editor also need option to view not in form or view in form but read only all fields
+    and enable/disable edit when nothing changed
+    and implement validation rules with active javascript feedback (may be in react)
+
+- start with action, e.g.
+    if nat_id is not set, go to ask it, else load profile
+    if profile valid, go home, else ask nat id...
+
+- handle [Cancel] from editor, may be javascript to do something?
+
+- consider using jq instead of template to extract session values for func req etc...?
+    and pass value as interface{} always then func can assert it has required type and extract fields as needed
+
+- add conditional logic in actions, e.g.
+    {"if":{"expr":"len(NationalId) != 13", "then":[], "else":[]}}
 
 # Bugs #
 - When from menu click on something that fail, then something that works, click browser back to menu, then all clicks on menu go to last thing that worked... something wierd...
