@@ -28,11 +28,11 @@ func (next fileItemNext) Execute(ctx context.Context) (nextItemId string, err er
 	session := ctx.Value(CtxSession{}).(*sessions.Session)
 	for stepIndex, step := range next {
 		if step.Set != nil {
-			name := step.Set.Name.Rendered(ctx)
+			name := step.Set.Name.Rendered(sessionData(session))
 			if !fieldNameRegex.MatchString(name) {
 				return "", errors.Wrapf(err, "step[%d].name.render(%s) invalid", stepIndex, name)
 			}
-			value := step.Set.Value.Rendered(ctx)
+			value := step.Set.Value.Rendered(sessionData(session))
 			log.Debugf("SET(%s)=\"%s\"", name, value)
 			session.Values[name] = value
 			continue

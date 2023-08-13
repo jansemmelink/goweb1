@@ -1,0 +1,21 @@
+{{define "head"}}<title>Some List</title>{{end}}
+{{define "body"}}
+<div>
+  <h1>{{.Title}}</h1>
+
+  <!-- top of list things like filter or change the order etc -->
+  <p>[...] TODO Change filter</p>
+  <p>[...] TODO Change Field and Order</p>
+  <p>[...] TODO Change nr to display</p>
+
+  <!-- display the current filtered/sorted/limited list items -->
+  {{range $item := .Items}}
+		<p><a href="/?next={{$item.NextUUID}}">{{$item.Caption}}</a></p>
+  {{end}}
+
+  <!-- user items are optional and apply to the list, e.g. add a new entry or do something with all displayed entries -->
+  {{range $oper := .Operations}}
+		<p><a href="/?next={{$oper.NextUUID}}">{{$oper.Caption}}</a></p>
+  {{end}}
+</div>
+{{end}}

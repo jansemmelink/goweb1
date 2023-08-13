@@ -27,6 +27,7 @@ type item struct {
 	//union: one of the following is required
 	Menu   *menu
 	Prompt *prompt
+	List   *list
 }
 
 func (i item) Validate(app App) error {
@@ -49,11 +50,17 @@ func (i item) Validate(app App) error {
 		}
 		count++
 	}
+	if i.List != nil {
+		if err := i.List.Validate(app); err != nil {
+			return errors.Wrapf(err, "invalid list")
+		}
+		count++
+	}
 	if count == 0 {
-		return errors.Errorf("missing menu|prompt|...")
+		return errors.Errorf("missing menu|prompt|list|...")
 	}
 	if count > 1 {
-		return errors.Errorf("has %d instead of 1 of menu|prompt|...", count)
+		return errors.Errorf("has %d instead of 1 of menu|prompt|list|...", count)
 	}
 	return nil
 } //item.Validate()
@@ -77,6 +84,9 @@ func (item item) Render(ctx context.Context, buffer io.Writer) (*PageData, error
 	if item.Prompt != nil {
 		return item.Prompt.Render(ctx, buffer)
 	}
+	if item.List != nil {
+		return item.List.Render(ctx, buffer)
+	}
 	return nil, errors.Errorf("cannot render %+v", item)
 }
 
@@ -84,6 +94,11 @@ func (item item) Process(ctx context.Context, httpReq *http.Request) (string, er
 	//menu does not process a http POST
 	// if item.Menu != nil {
 	// 	return item.Menu.Process(ctx, httpReq)
+	// }
+
+	//todo: maybe list will post search filter?
+	// if item.List != nil {
+	// 	return item.List.Process(ctx, httpReq)
 	// }
 	if item.Prompt != nil {
 		return item.Prompt.Process(ctx, httpReq)

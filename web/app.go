@@ -290,9 +290,15 @@ func (w webApp) userContext(httpReq *http.Request) context.Context {
 		}
 	}
 
+	lang, ok := session.Values["lang"].(string)
+	if !ok || len(lang) != 2 {
+		lang = ""
+	}
+
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, CtxClientData{}, clientData)
 	ctx = context.WithValue(ctx, app.CtxSession{}, session)
+	ctx = context.WithValue(ctx, app.CtxLang{}, lang)
 	return ctx
 } //webapp.userContext()
 

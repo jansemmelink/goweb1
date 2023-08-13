@@ -2,24 +2,25 @@ package app
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"html/template"
 	"strings"
 
 	"github.com/go-msvc/errors"
-	"github.com/gorilla/sessions"
 )
 
 // key is language code (any string, "" for default) and value is text
 // must have at least key = "" for default value
 type Caption map[string]ConfiguredTemplate
 
-func (c *Caption) Validate() error {
+func (c *Caption) Validate(allowBlank bool) error {
 	hasDefault := false
-	for lang := range *c {
+	for lang, ct := range *c {
 		if lang == "" {
 			hasDefault = true
+		}
+		if !allowBlank && ct.UnparsedTemplate == "" {
+			return errors.Errorf("blank template not allowed")
 		}
 	}
 	if !hasDefault {
@@ -52,8 +53,7 @@ func (ct ConfiguredTemplate) Validate() error {
 	return nil
 }
 
-func (ct ConfiguredTemplate) Rendered(ctx context.Context) string {
-	session := ctx.Value(CtxSession{}).(*sessions.Session)
+func (ct ConfiguredTemplate) Rendered(data interface{}) string {
 	buf := bytes.NewBuffer(nil)
 	if ct.tmpl == nil {
 		var err error
@@ -62,39 +62,40 @@ func (ct ConfiguredTemplate) Rendered(ctx context.Context) string {
 			panic(fmt.Sprintf("tmpl is nil: failed to parse: %+v", err))
 		}
 	}
-	if err := ct.tmpl.Execute(buf, sessionData(session)); err != nil {
+	if err := ct.tmpl.Execute(buf, data); err != nil {
 		log.Errorf("failed to render: %+v", err) //need context...
 		return ""
 	}
+	log.Debugf("tmpl(%s) with (%T)%+v -> \"%s\"", ct.UnparsedTemplate, data, data, string(buf.Bytes()))
 	return string(buf.Bytes())
 }
 
 type CtxLang struct{}
 
-func (c Caption) Render(s *sessions.Session) (string, error) {
-	lang, ok := s.Values["lang"].(string)
-	if !ok || len(lang) != 2 {
-		lang = ""
-	}
+func (c Caption) Render(lang string, data interface{}) (string, error) {
 	ct, ok := c[lang]
 	if !ok && lang != "" {
 		ct, ok = c[""]
 		if !ok {
-			return "", errors.Errorf("missing caption for lang:\"%s\"", lang)
+			return "", errors.Errorf("missing caption for lang:\"%s\" and no default", lang)
 		}
+		lang = ""
 	}
 
 	//todo: this must be done once and stored!
-	buffer := bytes.NewBuffer(nil)
-	if ct.tmpl == nil {
-		var err error
-		ct.tmpl, err = template.New("tmpl").Parse(ct.UnparsedTemplate)
-		if err != nil {
-			panic(fmt.Sprintf("tmpl is nil: failed to parse: %+v", err))
-		}
-	}
-	if err := ct.tmpl.Execute(buffer, s.Values); err != nil {
-		return "", errors.Wrapf(err, "failed to execute template")
-	}
-	return buffer.String(), nil
+	return ct.Rendered(data), nil
+	// buffer := bytes.NewBuffer(nil)
+	// if ct.tmpl == nil {
+	// 	var err error
+	// 	ct.tmpl, err = template.New("tmpl").Parse(ct.UnparsedTemplate)
+	// 	if err != nil {
+	// 		panic(fmt.Sprintf("tmpl is nil: failed to parse: %+v", err))
+	// 	}
+	// }
+	// if err := ct.tmpl.Execute(buffer, data); err != nil {
+	// 	return "", errors.Wrapf(err, "failed to execute template")
+	// }
+	// log.Debugf("Render(%s: %s) with (%T)%+v -> \"%s\"",
+	// 	lang, ct.UnparsedTemplate, data, data, buffer.String())
+	// return buffer.String(), nil
 } //Caption.Render()

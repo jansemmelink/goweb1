@@ -20,7 +20,7 @@ type prompt struct {
 }
 
 func (prompt *prompt) Validate() error {
-	if err := prompt.Caption.Validate(); err != nil {
+	if err := prompt.Caption.Validate(false); err != nil {
 		return errors.Wrapf(err, "invalid caption")
 	}
 	if err := prompt.Name.Validate(); err != nil {
@@ -33,8 +33,9 @@ func (prompt *prompt) Validate() error {
 }
 
 func (prompt prompt) Render(ctx context.Context, buffer io.Writer) (*PageData, error) {
+	lang := ctx.Value(CtxLang{}).(string)
 	session := ctx.Value(CtxSession{}).(*sessions.Session)
-	caption, err := prompt.Caption.Render(session)
+	caption, err := prompt.Caption.Render(lang, sessionData(session))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to render caption")
 	}
@@ -62,13 +63,13 @@ func (prompt prompt) Process(ctx context.Context, httpReq *http.Request) (string
 	if len(submittedValueList) != 1 {
 		return "", errors.Errorf("form post len(SubmittedValue)=%d", len(submittedValueList))
 	}
-	renderedName := prompt.Name.Rendered(ctx)
+	session := ctx.Value(CtxSession{}).(*sessions.Session)
+	renderedName := prompt.Name.Rendered(sessionData(session))
 	if !fieldNameRegex.MatchString(renderedName) {
 		return "", errors.Errorf("prompt invalid name(%s).rendered->\"%s\"", prompt.Name.UnparsedTemplate, renderedName)
 	}
 
 	log.Debugf("Set %s=\"%s\"", renderedName, submittedValueList[0])
-	session := ctx.Value(CtxSession{}).(*sessions.Session)
 	session.Values[renderedName] = submittedValueList[0]
 
 	//process next steps to return nextId or error

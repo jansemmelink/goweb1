@@ -10,8 +10,11 @@
     - list operations like add new item, or send to all, etc...
     need ability to load list each time rendered
 
+# Bug #
+- When from menu click on something that fail, then something that works, click browser back to menu, then all clicks on menu go to last thing that worked... something wierd...
+
 # Todo #
-- dynamic display modules built in the app...
+- app custom display modules, like list and menu and prompt... but allow app to register own modules, need to register them as item types, instead of hard coded item struct at moment... see how action was done.
 
 - try not to build a back-end yet... will be useful to make react app later, but for
     now the aim is exactly the opposit, i.e. to make an app quickly standalone

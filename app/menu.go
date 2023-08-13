@@ -18,7 +18,7 @@ type menu struct {
 }
 
 func (menu menu) Validate() error {
-	if err := menu.Title.Validate(); err != nil {
+	if err := menu.Title.Validate(true); err != nil {
 		return errors.Wrapf(err, "invalid title")
 	}
 	if len(menu.Items) == 0 {
@@ -30,7 +30,7 @@ func (menu menu) Validate() error {
 		}
 	}
 	return nil
-}
+} //menu.Validate()
 
 //todo: make menu with sub menus that can expand and collapse with headings
 //the rendering template can display it any way required...
@@ -43,17 +43,18 @@ func (menu menu) Render(ctx context.Context, buffer io.Writer) (*PageData, error
 		Links: map[string]fileItemNext{},
 		Data:  nil,
 	}
+	lang := ctx.Value(CtxLang{}).(string)
 	session := ctx.Value(CtxSession{}).(*sessions.Session)
-	title, err := menu.Title.Render(session)
+	title, err := menu.Title.Render(lang, sessionData(session))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to render title")
 	}
 	menuTmplData := tmplDataForMenu{
-		Title: title, //todo: i18n and substitute...
+		Title: title,
 		Items: []tmplDataForMenuItem{},
 	}
 	for _, item := range menu.Items {
-		caption, err := item.Caption.Render(session)
+		caption, err := item.Caption.Render(lang, sessionData(session))
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to render item caption")
 		}
@@ -61,7 +62,7 @@ func (menu menu) Render(ctx context.Context, buffer io.Writer) (*PageData, error
 		pageData.Links[uuid] = item.Next
 		menuTmplData.Items = append(menuTmplData.Items,
 			tmplDataForMenuItem{
-				Caption:  caption, //todo: i18n and substitute...
+				Caption:  caption,
 				NextUUID: uuid,
 			})
 	}
@@ -88,7 +89,7 @@ type menuItem struct {
 }
 
 func (item menuItem) Validate() error {
-	if err := item.Caption.Validate(); err != nil {
+	if err := item.Caption.Validate(false); err != nil {
 		return errors.Wrapf(err, "invalid caption")
 	}
 	if err := item.Next.Validate(); err != nil {

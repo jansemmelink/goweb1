@@ -11,7 +11,9 @@
             "title":{"":"Piece Jobs"},
             "items":[
                 {"caption":{"":"My Work"}, "next":[{"item":"my-work-menu"}]},
-                {"caption":{"":"My Skills"}, "next":[{"item":"my-skills-menu"}]},
+                {"caption":{"":"My Skills List (new)"}, "next":[{"item":"my-skills-list"}]},
+                {"caption":{"":"My Jobs List (new)"}, "next":[{"item":"my-jobs-list"}]},
+                {"caption":{"":"My Skills Menu (old)"}, "next":[{"item":"my-skills-menu"}]},
                 {"caption":{"":"My Person"}, "next":[{"item":"my-person-menu"}]}
             ]
         }
@@ -27,16 +29,46 @@
             ]
         }
     },
+    "my-skills-list":{
+        "list":{
+            "title":{"":"My Skills (LIST)"},
+            "get_items":[{"Items":{"listOfSkills()":{}}}],
+            "options":{
+                "item_caption":{"":"{{.Skill}}"},
+                "filter":true,
+                "sort":true
+            },
+            "operations":[
+                {"caption":{"":"Add Skill"}, "next":[
+                    {"item":"add-skill"}
+                ]},
+                {"caption":{"":"Back"}, "next":[{"item":"home"}]}
+            ]            
+        }
+    },
+    "my-jobs-list":{
+        "list":{
+            "title":{"":"My Jobs (LIST)"},
+            "get_items":[{"Items":{"listOfJobs()":{}}}],
+            "options":{
+                "filter":true,
+                "sort":true,
+                "item_caption":{"":"{{.Date}}/{{.Type}}"}
+            },
+            "operations":[
+                {"caption":{"":"Add Job"}, "next":[
+                    {"item":"add-job"}
+                ]},
+                {"caption":{"":"Back"}, "next":[{"item":"home"}]}
+            ]            
+        }
+    },
     "my-skills-menu":{
         "on_enter_actions":[
-            {"MySkillsListLoaded":true},
-            {"One":1},
-            {"Friend":"Attie"},
-            {"AllInfo":"{{.FullName}}, {{.PhoneNr}}"},
-            {"MySkillsList":{"getMySkills()":{"v1":"1", "v2":2}}}
+            {"SkillsList":{"getMySkills()":{"v1":"1", "v2":2}}}
         ],
         "menu":{
-            "title":{"":"My Skills"},
+            "title":{"":"My Skills (MENU)"},
             "items":[
                 {"caption":{"":"Painter"}, "next":[
                     {"set":{"name":"SkillId","value":"1"}},
