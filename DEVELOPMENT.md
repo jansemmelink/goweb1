@@ -6,21 +6,22 @@
     - item has caption
     - list supports operations at the bottom
     - list.item selection opens the item
+    - tabular display is working needed
 
 # Busy With #
-- Features
-    - list displays (not menu)
-        - change list order
-        - filter on part of item values/caption
-        - limit display needed for long lists, show total matches
-        - tabular display also needed
+- module to get/edit/save with user struct types from get/set func
 
-
+# Bugs #
 - When from menu click on something that fail, then something that works, click browser back to menu, then all clicks on menu go to last thing that worked... something wierd...
 
 - session data keeps growing, e.g. when list is displayed again and again, more uuid added... need way to scope and cleanup page specific data including links and Item<uuid> must also be temporary
 
 # Todo #
+- list displays (not menu)
+    - change list order
+    - filter on part of item values/caption
+    - limit display needed for long lists, show total matches
+
 - profile page must show back if nothing changes, else show save/cancel
     - make this also a generic item to edit a struct or map with some constraints built into the struct type, returned from the load func and also need a save func.
 
