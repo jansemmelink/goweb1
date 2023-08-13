@@ -13,7 +13,7 @@ type fileItemNext []fileItemNextStep
 
 func (next fileItemNext) Validate() error {
 	if len(next) == 0 {
-		return errors.Errorf("missing next")
+		return errors.Errorf("missing")
 	}
 	for stepIndex, step := range next {
 		if err := step.Validate(); err != nil {

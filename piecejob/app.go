@@ -18,6 +18,7 @@ func App() (app.App, error) {
 	piecejobApp.RegisterFunc("listOfSkills", listOfSkills)
 	piecejobApp.RegisterFunc("listOfJobs", listOfJobs)
 	piecejobApp.RegisterFunc("getProfile", getProfile)
+	piecejobApp.RegisterFunc("updProfile", updProfile)
 	//...
 	//piecejobApp.Register("some-id", myFunc)
 	//piecejobApp.Register("other-id", myType{})
@@ -71,16 +72,34 @@ func listOfJobs(ctx context.Context) (app.ColumnList, error) {
 	}, nil
 }
 
-func getProfile(ctx context.Context) (Profile, error) {
-	return Profile{
+var profiles = map[string]Profile{
+	"1": {
 		Name: "Hans",
 		Dob:  "5 Feb",
 		ID:   "123",
-	}, nil
+	},
+	"2": {
+		Name: "James",
+		Dob:  "10 Mar",
+		ID:   "456",
+	},
 }
 
 type Profile struct {
 	Name string
 	Dob  string `label:"Date of birth"`
 	ID   string `label:"National ID"`
+}
+
+func getProfile(ctx context.Context) (Profile, error) {
+	//todo: need to get id in req
+	log.Debugf("Retrieved profile:%+v", profiles["1"])
+	return profiles["1"], nil
+}
+
+func updProfile(ctx context.Context, profile Profile) error {
+	//todo: need to get id in req
+	log.Debugf("Saving profile:%+v", profile)
+	profiles["1"] = profile
+	return nil
 }

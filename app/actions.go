@@ -101,7 +101,7 @@ type actionFunc struct {
 }
 
 func (f *actionFunc) Validate(app App) error {
-	if !fieldNameRegex.MatchString(f.set) {
+	if f.set != "" && !fieldNameRegex.MatchString(f.set) { //may be empty when not storing anything, e.g. func has no result value
 		return errors.Errorf("invalid field name \"%s\"", f.set)
 	}
 	if f.name == "" {

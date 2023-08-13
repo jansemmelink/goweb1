@@ -20,6 +20,7 @@ type edit struct {
 	UpdActions *Actions `json:"upd_actions" doc:"Actions to execute to update the item."`
 	// Options    ListOptions `json:"options" doc:"Options to manipulate the display and behavior of the list"`
 	// Operations []menuItem  `json:"operations"`
+	SavedNext fileItemNext `json:"saved_next"`
 }
 
 func (edit edit) Validate(app App) error {
@@ -37,6 +38,9 @@ func (edit edit) Validate(app App) error {
 	}
 	if err := edit.UpdActions.Validate(app); err != nil {
 		return errors.Wrapf(err, "invalid upd_actions")
+	}
+	if err := edit.SavedNext.Validate(); err != nil {
+		return errors.Wrapf(err, "invalid saved_next")
 	}
 	return nil
 } //edit.Validate()
@@ -159,18 +163,40 @@ func (edit edit) Render(ctx context.Context, buffer io.Writer) (*PageData, error
 func (edit edit) Process(ctx context.Context, httpReq *http.Request) (string, error) {
 	httpReq.ParseForm()
 	log.Debugf("form data: %+v", httpReq.Form)
-	// session := ctx.Value(CtxSession{}).(*sessions.Session)
-	// renderedName := prompt.Name.Rendered(sessionData(session))
-	// if !fieldNameRegex.MatchString(renderedName) {
-	// 	return "", errors.Errorf("prompt invalid name(%s).rendered->\"%s\"", prompt.Name.UnparsedTemplate, renderedName)
-	// }
+	session := ctx.Value(CtxSession{}).(*sessions.Session)
+	item := session.Values["Item"] //consider making this uuid so that re-submit of old form has no effect
 
-	// log.Debugf("Set %s=\"%s\"", renderedName, submittedValueList[0])
-	// session.Values[renderedName] = submittedValueList[0]
+	//apply the form values to struct fields
+	structType := reflect.TypeOf(item)
+	if structType.Kind() != reflect.Struct {
+		return "", errors.Errorf("edit session.item %T is not a struct", item)
+	}
 
-	//process next steps to return nextId or error
-	return "", errors.Errorf("NYI") //edit.Next.Execute(ctx)
-	//need next for saved and next for cancel==back...
+	//make a new copy of item which we can edit
+	newValuePtr := reflect.New(structType)
+	for i := 0; i < structType.NumField(); i++ {
+		f := structType.Field(i)
+		v := httpReq.Form.Get(f.Name)
+		if n, err := fmt.Sscanf(v, "%v", newValuePtr.Elem().Field(i).Addr().Interface()); err != nil || n != 1 {
+			return "", errors.Wrapf(err, "failed to parse \"%s\" into %T", v, newValuePtr.Field(i).Interface())
+		}
+		x := newValuePtr.Elem().Field(i).Interface()
+		log.Debugf("%s: \"%s\" -> (%T)%+v", f.Name, v, x, x)
+	}
+	item = newValuePtr.Elem().Interface()
+	log.Debugf("Edited Item: (%T)%+v", item, item)
+
+	if err := edit.UpdActions.Execute(ctx); err != nil {
+		return "", errors.Wrapf(err, "edit.upd_actions failed")
+	}
+
+	session.Values["Item"] = item
+
+	nextItemId, err := edit.SavedNext.Execute(ctx)
+	if err != nil {
+		return "", errors.Errorf("failed to get next")
+	}
+	return nextItemId, nil
 } //edit.Process()
 
 type tmplDataForEdit struct {
