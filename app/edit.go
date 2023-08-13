@@ -178,7 +178,7 @@ func (edit edit) Process(ctx context.Context, httpReq *http.Request) (string, er
 		f := structType.Field(i)
 		v := httpReq.Form.Get(f.Name)
 		if n, err := fmt.Sscanf(v, "%v", newValuePtr.Elem().Field(i).Addr().Interface()); err != nil || n != 1 {
-			return "", errors.Wrapf(err, "failed to parse \"%s\" into %T", v, newValuePtr.Field(i).Interface())
+			return "", errors.Wrapf(err, "failed to parse \"%s\" into %T", v, newValuePtr.Elem().Field(i).Interface())
 		}
 		x := newValuePtr.Elem().Field(i).Interface()
 		log.Debugf("%s: \"%s\" -> (%T)%+v", f.Name, v, x, x)
