@@ -233,13 +233,30 @@ func (w webApp) hdlr() func(httpRes http.ResponseWriter, httpReq *http.Request) 
 		//render into buffer so that rendering can complete and define page data
 		//before we write the cookie and session and then the page content
 		//(wrong order does not save correctly)
-		pageBuffer := bytes.NewBuffer(nil)
-		pageSessionData, err := currentItem.Render(ctx, pageBuffer)
-		if err != nil {
-			log.Errorf("Rendering failed: %+v", err)
-			redirect(httpRes, "Failed to render. Sorry!", "Restart", "/")
-			return
-		}
+		var pageBuffer *bytes.Buffer
+		var pageSessionData *app.PageData
+		for {
+			pageBuffer = bytes.NewBuffer(nil)
+			var err error
+			var redirectToItemId string
+			redirectToItemId, pageSessionData, err = currentItem.Render(ctx, pageBuffer)
+			if err != nil {
+				log.Errorf("Rendering failed: %+v", err)
+				redirect(httpRes, "Failed to render. Sorry!", "Restart", "/")
+				return
+			}
+			if redirectToItemId != "" {
+				log.Debugf("Redirect to item(%s)", redirectToItemId)
+				currentItemId, currentItem, err = w.navigateTo(ctx, redirectToItemId)
+				if err != nil {
+					log.Errorf("Redirect(%s) failed: %+v", redirectToItemId, err)
+					redirect(httpRes, "Failed to render. Sorry!", "Restart", "/")
+					return
+				}
+				continue //render item redirected to...
+			}
+			break
+		} //for redirect loop
 
 		//store optional page session data
 		//it may be nil, but will be accessible to app.AppItem.Process()
@@ -352,13 +369,13 @@ func (w webApp) navigateTo(ctx context.Context, nextItemId string) (string, app.
 	}
 	log.Debugf("Nav Item -> %s", nextItemId)
 
-	if nextItemId == "home" {
-		session := ctx.Value(app.CtxSession{}).(*sessions.Session)
-		for n := range session.Values {
-			delete(session.Values, n)
-		}
-		log.Debugf("cleared the session")
-	}
+	// if nextItemId == "home" {
+	// 	session := ctx.Value(app.CtxSession{}).(*sessions.Session)
+	// 	for n := range session.Values {
+	// 		delete(session.Values, n)
+	// 	}
+	// 	log.Debugf("cleared the session")
+	// }
 
 	if err := nextItem.OnEnterActions().Execute(ctx); err != nil {
 		return "", nil, errors.Wrapf(err, "failed to execute on_enter_actions")

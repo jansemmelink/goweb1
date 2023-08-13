@@ -8,18 +8,20 @@
     - list.item selection opens the item
     - tabular display is working needed
 - added edit
-    - get works without id, but busy figuring out how to pass args to get func
-    - save works without id - should anyway get id from internal
+    - get works and pass in national id
+    - save works without id because it gets it from the struct
     - cancel not yet working to go back
 
 # Busy With #
-- editormodule to get/edit/save with user struct types from get/set func
-    editor can now edit profile,
-    editor must also be able to work on list selection when Item is already defined by list.
-        but item then is map... not struct.
+- edit:
+    edit work for profile with specified get func, but
+    now trying to use edit after job selection to use Item specified by list
 
-- editor must get with id, e.g. profile[id]
-    with two concurrent windows, not yet separated
+    note: current home is broken to get nat id because not yet have conditional actions
+
+
+        but item then is map... not struct.
+    cancel not yet working
 
 - editor also need option to view not in form or view in form but read only all fields
     and enable/disable edit when nothing changed
