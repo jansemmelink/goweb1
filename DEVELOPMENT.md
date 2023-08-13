@@ -5,23 +5,27 @@
     - loads list of items when display/refresh
     - item has caption
     - list supports operations at the bottom
-    (displayed, but links to items not yet working)
+    - list.item selection opens the item
 
 # Busy With #
-- session data got too long to save in default sqllite store...
+- Features
+    - list displays (not menu)
+        - change list order
+        - filter on part of item values/caption
+        - limit display needed for long lists, show total matches
+        - tabular display also needed
 
-- list display (not menu)
-    - make item links work...!!!
-    - change sort order
-    - filter on part of caption
-    - limit display
 
-# Bug #
 - When from menu click on something that fail, then something that works, click browser back to menu, then all clicks on menu go to last thing that worked... something wierd...
 
 - session data keeps growing, e.g. when list is displayed again and again, more uuid added... need way to scope and cleanup page specific data including links and Item<uuid> must also be temporary
 
 # Todo #
+- profile page must show back if nothing changes, else show save/cancel
+    - make this also a generic item to edit a struct or map with some constraints built into the struct type, returned from the load func and also need a save func.
+
+    ...i.e. generic list and generic view/display/delete/add given a table name and item type
+
 - app custom display modules, like list and menu and prompt... but allow app to register own modules, need to register them as item types, instead of hard coded item struct at moment... see how action was done.
 
 - move templates into app to be generic and let use change them

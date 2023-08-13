@@ -14,6 +14,7 @@ import (
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/jansemmelink/goweb1/app"
+	"github.com/michaeljs1990/sqlitestore"
 	"github.com/rbcervilla/redisstore"
 )
 
@@ -72,35 +73,35 @@ func (w webApp) Run() error {
 	//see https://github.com/gorilla/sessions for list of options
 
 	//-======  sqlite  =======-
-	// if false {
-	// 	var err error
-	// 	w.sessionStore, err = sqlitestore.NewSqliteStore(
-	// 		"./database",
-	// 		"sessions",
-	// 		"/",
-	// 		3600,
-	// 		[]byte("<SecretKey>"))
-	// 	if err != nil {
-	// 		return errors.Wrapf(err, "failed to create session store")
-	// 	}
-	// } else {
-	client := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-	})
-	store, err := redisstore.NewRedisStore(client)
-	if err != nil {
-		panic(fmt.Sprintf("failed to create redis store: %+v", err))
-	}
+	if true {
+		var err error
+		w.sessionStore, err = sqlitestore.NewSqliteStore(
+			"./database",
+			"sessions",
+			"/",
+			3600,
+			[]byte("<SecretKey>"))
+		if err != nil {
+			return errors.Wrapf(err, "failed to create session store")
+		}
+	} else {
+		client := redis.NewClient(&redis.Options{
+			Addr: "localhost:6379",
+		})
+		store, err := redisstore.NewRedisStore(client)
+		if err != nil {
+			panic(fmt.Sprintf("failed to create redis store: %+v", err))
+		}
 
-	// Example changing configuration for sessions
-	store.KeyPrefix("session_")
-	store.Options(sessions.Options{
-		Path:   "/",
-		Domain: "example.com",
-		MaxAge: 86400 * 60,
-	})
-	w.sessionStore = store
-	// } //scope
+		// Example changing configuration for sessions
+		store.KeyPrefix("session_")
+		store.Options(sessions.Options{
+			Path:   "/",
+			Domain: "example.com",
+			MaxAge: 86400 * 60,
+		})
+		w.sessionStore = store
+	} //scope
 
 	//setup and start HTTP server
 	http.HandleFunc("/", w.hdlr())
@@ -259,23 +260,6 @@ func (w webApp) hdlr() func(httpRes http.ResponseWriter, httpReq *http.Request) 
 				log.Debugf("  Session[%s] = (%T)%+v", n, v, v)
 			}
 		}
-
-		// //verify saved:
-		// {
-		// 	s, err := w.sessionStore.Get(httpReq, session.Name())
-		// 	if err != nil {
-		// 		log.Errorf("failed to get session(%s) data: %+v", session.Name(), err)
-		// 	} else {
-		// 		log.Debugf("Loaded Session(%s) (%d values, id:%s, name:%s):", session.Name(), len(s.Values), s.ID, s.Name())
-		// 		for n, v := range s.Values {
-		// 			log.Debugf("  Session[%s] = (%T)%+v", n, v, v)
-		// 		}
-		// 	}
-
-		// 	if len(s.Values) != len(session.Values) {
-		// 		panic("NOT LOADED AFTER SAVE")
-		// 	}
-		// }
 
 		//encode updated cookie value into the response
 		//(written to httpRes before content)

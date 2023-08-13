@@ -2,7 +2,9 @@ package app
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/go-msvc/data"
 	"github.com/go-msvc/errors"
 	"github.com/gorilla/sessions"
 )
@@ -33,8 +35,19 @@ func (next fileItemNext) Execute(ctx context.Context) (nextItemId string, err er
 			if !fieldNameRegex.MatchString(name) {
 				return "", errors.Wrapf(err, "step[%d].name=\"%s\" is invalid fieldname (expecting CamelCase)", stepIndex, name)
 			}
-			value := step.Set.Value.Rendered(sessionData(session))
-			log.Debugf("SET(%s)=\"%s\"", name, value)
+			value, ok := session.Values[step.Set.ValueStr]
+			if ok {
+				session.Values[name] = value
+				log.Debugf("DIRECT SET(%s)=\"%s\"", name, value)
+			} else {
+				//array dereference...
+				value, err = data.Get(sessionData(session), step.Set.ValueStr)
+				if err != nil {
+					panic(fmt.Sprintf("cannot set from \"%s\": %+v", step.Set.ValueStr, err))
+				}
+			}
+			// value := ...step.Set.Value.Rendered(sessionData(session))
+			log.Debugf("SET(%s)=(%T)\"%v\"", name, value, value)
 			session.Values[name] = value
 			continue
 		}

@@ -106,9 +106,10 @@ func (list list) Render(ctx context.Context, buffer io.Writer) (*PageData, error
 		//next is the same for all item except it sets the selected item value as well
 		pageData.Links[uuid] = append(fileItemNext{
 			fileItemNextStep{Set: &fileItemSet{
-				Name:  ConfiguredTemplate{UnparsedTemplate: list.Options.ItemSet},
-				Value: ConfiguredTemplate{UnparsedTemplate: fmt.Sprintf("{{index .Items \"%s\"}}", uuid)}}},
-		}, list.Options.ItemNext...)
+				Name: ConfiguredTemplate{UnparsedTemplate: list.Options.ItemSet},
+				//Value: ConfiguredTemplate{UnparsedTemplate: fmt.Sprintf("{{index .Items \"%s\"}}", uuid)}}},
+				ValueStr: "Items[" + uuid + "]",
+			}}}, list.Options.ItemNext...)
 
 		listTmplData.Items = append(listTmplData.Items,
 			tmplDataForListItem{
