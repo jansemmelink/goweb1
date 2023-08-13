@@ -1,0 +1,14 @@
+{{define "head"}}<title>Some Editor</title>{{end}}
+{{define "body"}}
+<div>
+  <h1>{{.Title}}</h1>
+  <form method="POST" action="/">
+    {{range $field := .Fields}}
+      <label for="{{$field.Name}}">{{$field.Label}}:</label><br/>
+      <input type="text" placeholder="Enter something..." name="{{$field.Name}}" value="{{$field.Value}}"/><br/>
+    {{end}}
+    <button type="cancel">Cancel</button>
+    <button type="submit">Save</button>
+  </form>
+</div>
+{{end}}

@@ -17,6 +17,7 @@ func App() (app.App, error) {
 	piecejobApp.RegisterFunc("getMySkills", getMySkills)
 	piecejobApp.RegisterFunc("listOfSkills", listOfSkills)
 	piecejobApp.RegisterFunc("listOfJobs", listOfJobs)
+	piecejobApp.RegisterFunc("getProfile", getProfile)
 	//...
 	//piecejobApp.Register("some-id", myFunc)
 	//piecejobApp.Register("other-id", myType{})
@@ -68,4 +69,18 @@ func listOfJobs(ctx context.Context) (app.ColumnList, error) {
 	return app.ColumnList{
 		Items: jobs,
 	}, nil
+}
+
+func getProfile(ctx context.Context) (Profile, error) {
+	return Profile{
+		Name: "Hans",
+		Dob:  "5 Feb",
+		ID:   "123",
+	}, nil
+}
+
+type Profile struct {
+	Name string
+	Dob  string `label:"Date of birth"`
+	ID   string `label:"National ID"`
 }

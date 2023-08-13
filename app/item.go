@@ -25,9 +25,10 @@ type item struct {
 	OnEnter *Actions `json:"on_enter_actions,omitempty" doc:"Optional list of actions to take when entering the item"`
 
 	//union: one of the following is required
-	Menu   *menu
-	Prompt *prompt
-	List   *list
+	Menu   *menu   `json:"menu"`
+	Prompt *prompt `json:"prompt"`
+	List   *list   `json:"list"`
+	Edit   *edit   `json:"edit"`
 }
 
 func (i item) Validate(app App) error {
@@ -56,8 +57,14 @@ func (i item) Validate(app App) error {
 		}
 		count++
 	}
+	if i.Edit != nil {
+		if err := i.Edit.Validate(app); err != nil {
+			return errors.Wrapf(err, "invalid edit")
+		}
+		count++
+	}
 	if count == 0 {
-		return errors.Errorf("missing menu|prompt|list|...")
+		return errors.Errorf("missing menu|prompt|list|edit|...")
 	}
 	if count > 1 {
 		return errors.Errorf("has %d instead of 1 of menu|prompt|list|...", count)
@@ -87,6 +94,9 @@ func (item item) Render(ctx context.Context, buffer io.Writer) (*PageData, error
 	if item.List != nil {
 		return item.List.Render(ctx, buffer)
 	}
+	if item.Edit != nil {
+		return item.Edit.Render(ctx, buffer)
+	}
 	return nil, errors.Errorf("cannot render %+v", item)
 }
 
@@ -102,6 +112,9 @@ func (item item) Process(ctx context.Context, httpReq *http.Request) (string, er
 	// }
 	if item.Prompt != nil {
 		return item.Prompt.Process(ctx, httpReq)
+	}
+	if item.Edit != nil {
+		return item.Edit.Process(ctx, httpReq)
 	}
 	return "", errors.Errorf("cannot process %+v", item)
 }

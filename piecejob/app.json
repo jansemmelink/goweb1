@@ -7,7 +7,8 @@
                 {"caption":{"":"My Skills List (new)"}, "next":[{"item":"my-skills-list"}]},
                 {"caption":{"":"My Jobs List (new)"}, "next":[{"item":"my-jobs-list"}]},
                 {"caption":{"":"My Skills Menu (old)"}, "next":[{"item":"my-skills-menu"}]},
-                {"caption":{"":"My Person"}, "next":[{"item":"my-person-menu"}]}
+                {"caption":{"":"My Person"}, "next":[{"item":"my-person-menu"}]},
+                {"caption":{"":"My Profile (new)"}, "next":[{"item":"profile"}]}
             ]
         }
     },
@@ -145,5 +146,15 @@
                 {"item":"my-person-menu"}
             ]
         }
+    },
+    "profile":{
+        "edit":{
+            "title":{"":"Profile"},
+            "get_actions":[
+                {"Item":{"getProfile()":{}}}
+            ],
+            "upd_actions":[]
+        }
     }
+
 }
