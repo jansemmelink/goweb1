@@ -9,7 +9,10 @@ import (
 	"regexp"
 
 	"github.com/go-msvc/errors"
+	"github.com/go-msvc/logger"
 )
+
+var log = logger.New().WithLevel(logger.LevelDebug)
 
 type App interface {
 	//RegisterFunc:
@@ -98,7 +101,7 @@ func (app *app) Load(filename string) error {
 	}
 	defer f.Close()
 
-	fileItems := map[string]fileItem{}
+	fileItems := map[string]item{}
 	if err := json.NewDecoder(f).Decode(&fileItems); err != nil {
 		return errors.Wrapf(err, "failed to read items from JSON file %s", filename)
 	}

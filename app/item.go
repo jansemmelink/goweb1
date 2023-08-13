@@ -20,16 +20,16 @@ type AppItem interface {
 	Process(ctx context.Context, httpReq *http.Request) (string, error)
 }
 
-type fileItem struct {
+type item struct {
 	//optional
 	OnEnter *Actions `json:"on_enter_actions,omitempty" doc:"Optional list of actions to take when entering the item"`
 
 	//union: one of the following is required
-	Menu   *fileItemMenu
-	Prompt *fileItemPrompt
+	Menu   *menu
+	Prompt *prompt
 }
 
-func (i fileItem) Validate(app App) error {
+func (i item) Validate(app App) error {
 	if i.OnEnter != nil {
 		if err := i.OnEnter.Validate(app); err != nil {
 			return errors.Wrapf(err, "invalid on_enter")
@@ -56,9 +56,9 @@ func (i fileItem) Validate(app App) error {
 		return errors.Errorf("has %d instead of 1 of menu|prompt|...", count)
 	}
 	return nil
-} //fileItem.Validate()
+} //item.Validate()
 
-func (item fileItem) OnEnterActions() *Actions {
+func (item item) OnEnterActions() *Actions {
 	//do not return nil, else OnEnterActions().Execute() will fail
 	//rather return an empty string
 	if item.OnEnter == nil {
@@ -70,7 +70,7 @@ func (item fileItem) OnEnterActions() *Actions {
 	return item.OnEnter
 }
 
-func (item fileItem) Render(ctx context.Context, buffer io.Writer) (*PageData, error) {
+func (item item) Render(ctx context.Context, buffer io.Writer) (*PageData, error) {
 	if item.Menu != nil {
 		return item.Menu.Render(ctx, buffer)
 	}
@@ -80,7 +80,7 @@ func (item fileItem) Render(ctx context.Context, buffer io.Writer) (*PageData, e
 	return nil, errors.Errorf("cannot render %+v", item)
 }
 
-func (item fileItem) Process(ctx context.Context, httpReq *http.Request) (string, error) {
+func (item item) Process(ctx context.Context, httpReq *http.Request) (string, error) {
 	//menu does not process a http POST
 	// if item.Menu != nil {
 	// 	return item.Menu.Process(ctx, httpReq)

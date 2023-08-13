@@ -1,10 +1,26 @@
-# Design #
-- i18n and substitution on all captions
-- prompts
+# Progress #
+- added on_enter_actions which can call functions, getMySkills() returns hard coded list
+
+# Busy With #
+- list display (not menu)
+    - caption template can display []string or fields from []struct
+    - change sort order
+    - filter on part of caption
+    - limit display
+    - list operations like add new item, or send to all, etc...
+    need ability to load list each time rendered
+
+# Todo #
+- dynamic display modules built in the app...
+
+- try not to build a back-end yet... will be useful to make react app later, but for
+    now the aim is exactly the opposit, i.e. to make an app quickly standalone
+    and later be able to call other services as needed, but initially just all-in-one
+    quick to market.
+- make user id accessible to functions, e.g. national id to call backend
+- template resolve inside action function args and set...
+
 - imply and show back option on all menus but give option to disable it
-- work with session values, set, clear, retrieve, ...
-- add actions
-- call registered user functions as actions
 - pass named params to user functions - not directly retrieve session data
     - so function can iterated over lists etc...
 

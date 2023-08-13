@@ -12,14 +12,14 @@ import (
 	"github.com/gorilla/sessions"
 )
 
-type fileItemPrompt struct {
+type prompt struct {
 	Caption Caption            `json:"caption"`
 	Name    ConfiguredTemplate `json:"name" doc:"Template to construct name where value will be stored. Result must be CamelCase."`
 	Next    fileItemNext       `json:"next"`
 	//todo: validation rules/function with args
 }
 
-func (prompt *fileItemPrompt) Validate() error {
+func (prompt *prompt) Validate() error {
 	if err := prompt.Caption.Validate(); err != nil {
 		return errors.Wrapf(err, "invalid caption")
 	}
@@ -32,7 +32,7 @@ func (prompt *fileItemPrompt) Validate() error {
 	return nil
 }
 
-func (prompt fileItemPrompt) Render(ctx context.Context, buffer io.Writer) (*PageData, error) {
+func (prompt prompt) Render(ctx context.Context, buffer io.Writer) (*PageData, error) {
 	session := ctx.Value(CtxSession{}).(*sessions.Session)
 	caption, err := prompt.Caption.Render(session)
 	if err != nil {
@@ -51,9 +51,9 @@ func (prompt fileItemPrompt) Render(ctx context.Context, buffer io.Writer) (*Pag
 		return nil, errors.Wrapf(err, "failed to exec prompt template")
 	}
 	return nil, nil
-} //fileItemPrompt.Render()
+} //prompt.Render()
 
-func (prompt fileItemPrompt) Process(ctx context.Context, httpReq *http.Request) (string, error) {
+func (prompt prompt) Process(ctx context.Context, httpReq *http.Request) (string, error) {
 	httpReq.ParseForm()
 	submittedValueList, ok := httpReq.Form["SubmittedValue"] //"SubmittedValue" is used in prompt.tmpl...
 	if !ok {
@@ -73,7 +73,7 @@ func (prompt fileItemPrompt) Process(ctx context.Context, httpReq *http.Request)
 
 	//process next steps to return nextId or error
 	return prompt.Next.Execute(ctx)
-} //fileItemPrompt.Process()
+} //prompt.Process()
 
 type tmplDataForPrompt struct {
 	Caption string
