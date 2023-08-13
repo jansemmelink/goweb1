@@ -15,15 +15,14 @@ import (
 )
 
 type edit struct {
-	Title      Caption  `json:"title"`
-	GetActions *Actions `json:"get_actions" doc:"Actions to execute to get the item. It must have an item that sets \"Item\"."`
-	UpdActions *Actions `json:"upd_actions" doc:"Actions to execute to update the item."`
-	// Options    ListOptions `json:"options" doc:"Options to manipulate the display and behavior of the list"`
-	// Operations []menuItem  `json:"operations"`
-	SavedNext fileItemNext `json:"saved_next"`
+	Title       Caption  `json:"title"`
+	GetActions  *Actions `json:"get_actions" doc:"Actions to execute to get the item. It must have an item that sets \"Item\"."`
+	UpdFuncName string   `json:"upd_func" doc:"Func to save item"`
+	updFunc     *AppFunc
+	SavedNext   fileItemNext `json:"saved_next"`
 }
 
-func (edit edit) Validate(app App) error {
+func (edit *edit) Validate(app App) error {
 	if err := edit.Title.Validate(false); err != nil {
 		return errors.Wrapf(err, "invalid title")
 	}
@@ -33,11 +32,9 @@ func (edit edit) Validate(app App) error {
 	if err := edit.GetActions.Validate(app); err != nil {
 		return errors.Wrapf(err, "invalid get_actions")
 	}
-	if edit.UpdActions == nil {
-		return errors.Errorf("missing upd_actions")
-	}
-	if err := edit.UpdActions.Validate(app); err != nil {
-		return errors.Wrapf(err, "invalid upd_actions")
+	var ok bool
+	if edit.updFunc, ok = app.FuncByName(edit.UpdFuncName); !ok {
+		return errors.Errorf("missing/unknown upd_func:\"%s\"", edit.UpdFuncName)
 	}
 	if err := edit.SavedNext.Validate(); err != nil {
 		return errors.Wrapf(err, "invalid saved_next")
@@ -186,12 +183,16 @@ func (edit edit) Process(ctx context.Context, httpReq *http.Request) (string, er
 	item = newValuePtr.Elem().Interface()
 	log.Debugf("Edited Item: (%T)%+v", item, item)
 
-	if err := edit.UpdActions.Execute(ctx); err != nil {
-		return "", errors.Wrapf(err, "edit.upd_actions failed")
+	//call update function
+	results := edit.updFunc.funcValue.Call([]reflect.Value{
+		reflect.ValueOf(ctx),
+		reflect.ValueOf(item), //updated item
+	})
+	errValue := results[len(results)-1]
+	if !errValue.IsNil() {
+		return "", errors.Wrapf(errValue.Interface().(error), "failed to update item")
 	}
-
 	session.Values["Item"] = item
-
 	nextItemId, err := edit.SavedNext.Execute(ctx)
 	if err != nil {
 		return "", errors.Errorf("failed to get next")

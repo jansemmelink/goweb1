@@ -153,9 +153,7 @@
             "get_actions":[
                 {"Item":{"getProfile()":{}}}
             ],
-            "upd_actions":[
-                {"":{"updProfile()":{}}}
-            ],
+            "upd_func":"updProfile",
             "saved_next":[{"item":"home"}]
         }
     }
