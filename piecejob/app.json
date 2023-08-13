@@ -5,7 +5,7 @@
             {"One":1},
             {"Friend":"Attie"},
             {"AllInfo":"{{.FullName}}, {{.PhoneNr}}"},
-            {"MySkillsList":{"loadMySkills":{"v1":"1", "v2":2}}}
+            {"MySkillsList":{"getMySkills()":{"v1":"1", "v2":2}}}
         ],
         "menu":{
             "title":{"":"Piece Jobs"},
@@ -33,7 +33,7 @@
             {"One":1},
             {"Friend":"Attie"},
             {"AllInfo":"{{.FullName}}, {{.PhoneNr}}"},
-            {"MySkillsList":{"loadMySkills":{"v1":"1", "v2":2}}}
+            {"MySkillsList":{"getMySkills()":{"v1":"1", "v2":2}}}
         ],
         "menu":{
             "title":{"":"My Skills"},

@@ -29,9 +29,9 @@ type fileItem struct {
 	Prompt *fileItemPrompt
 }
 
-func (i fileItem) Validate() error {
+func (i fileItem) Validate(app App) error {
 	if i.OnEnter != nil {
-		if err := i.OnEnter.Validate(); err != nil {
+		if err := i.OnEnter.Validate(app); err != nil {
 			return errors.Wrapf(err, "invalid on_enter")
 		}
 	}

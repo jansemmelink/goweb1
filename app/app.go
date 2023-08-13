@@ -5,40 +5,91 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
 	"regexp"
 
 	"github.com/go-msvc/errors"
 )
 
 type App interface {
-	RegisterFunc(name string, appFunc AppFunc)
+	//RegisterFunc:
+	//	appFunc must be a func taking args (context.Context, optional request)
+	//			and respond with (optional response, error)
+	RegisterFunc(name string, appFunc interface{}) error
+	FuncByName(name string) (*AppFunc, bool)
 	Load(filename string) error
 	GetItem(id string) (AppItem, bool)
 }
 
-type AppFunc func(ctx context.Context, args map[string]interface{}) error
+type AppFunc struct {
+	reqType   reflect.Type
+	resType   reflect.Type
+	funcValue reflect.Value
+}
 
 func New() App {
 	return &app{
-		funcs: map[string]AppFunc{},
+		funcs: map[string]*AppFunc{},
 		items: map[string]AppItem{},
 	}
 }
 
 type app struct {
-	funcs map[string]AppFunc
+	funcs map[string]*AppFunc
 	items map[string]AppItem
 }
 
-func (app *app) RegisterFunc(name string, appFunc AppFunc) {
+func (app *app) MustRegisterFunc(name string, appFunc interface{}) {
+	if err := app.RegisterFunc(name, appFunc); err != nil {
+		panic(fmt.Sprintf("%+v", err))
+	}
+} //app.MustRegisterFunc()
+
+var contextType = reflect.TypeOf((*context.Context)(nil)).Elem()
+var errorType = reflect.TypeOf((*error)(nil)).Elem()
+
+func (app *app) RegisterFunc(name string, appFunc interface{}) error {
 	if _, ok := app.funcs[name]; ok {
-		panic(fmt.Sprintf("register func %s() already registered", name))
+		return errors.Errorf("register func %s() already registered", name)
 	}
 	if appFunc == nil {
-		panic(fmt.Sprintf("register func %s() is nil", name))
+		return errors.Errorf("register func %s() is nil", name)
 	}
-	app.funcs[name] = appFunc
-}
+	funcType := reflect.TypeOf(appFunc)
+	if funcType.NumIn() < 1 || funcType.In(0) != contextType {
+		return errors.Errorf("%s() first arg %v is not %v", name, funcType.In(0), contextType)
+	}
+	if funcType.NumIn() > 2 {
+		return errors.Errorf("%s() takes more args than only (ctx, req)", name)
+	}
+	if funcType.NumOut() < 1 || funcType.Out(funcType.NumOut()-1) != errorType {
+		return errors.Errorf("%s() last result %v is not %v", name, funcType.Out(funcType.NumOut()-1), errorType)
+	}
+	if funcType.NumOut() > 2 {
+		return errors.Errorf("%s() returns more results than only (res, error)", name)
+	}
+
+	info := &AppFunc{
+		funcValue: reflect.ValueOf(appFunc),
+	}
+	if funcType.NumIn() == 2 {
+		info.reqType = funcType.In(1)
+	}
+	if funcType.NumOut() == 2 {
+		info.resType = funcType.Out(0)
+	}
+	app.funcs[name] = info
+	log.Debugf("Registered func %s(%v) -> %v", name, info.reqType, info.resType)
+	return nil
+} //app.RegisterFunc()
+
+func (app app) FuncByName(name string) (*AppFunc, bool) {
+	fnc, ok := app.funcs[name]
+	if ok {
+		return fnc, true
+	}
+	return nil, false
+} //app.FuncByName()
 
 func (app *app) Load(filename string) error {
 	f, err := os.Open(filename)
@@ -55,7 +106,7 @@ func (app *app) Load(filename string) error {
 		if !itemIdRegex.MatchString(id) {
 			return errors.Errorf("missing/invalid item id \"%s\" (expect lower alnum with dashes, e.g. \"my-item1-loader\")", id)
 		}
-		if err := item.Validate(); err != nil {
+		if err := item.Validate(app); err != nil {
 			return errors.Wrapf(err, "invalid item \"%s\"", id)
 		}
 		//todo: validate etc...

@@ -5,7 +5,6 @@ import (
 
 	"github.com/go-msvc/errors"
 	"github.com/go-msvc/logger"
-	"github.com/gorilla/sessions"
 	"github.com/jansemmelink/goweb1/app"
 )
 
@@ -27,9 +26,13 @@ func App() (app.App, error) {
 	return piecejobApp, nil
 }
 
-func getMySkills(ctx context.Context, args map[string]interface{}) error {
+type GetMySkillsReq struct {
+	UpperCase bool
+	Prefix    string
+}
+
+func getMySkills(ctx context.Context, req GetMySkillsReq) ([]string, error) {
+	log.Debugf("req: (%T)%+v", req, req)
 	mySkillsList := []string{"Cleaner", "Painter"}
-	session := ctx.Value(app.CtxSession{}).(sessions.Session)
-	session.Values["MySkills"] = mySkillsList
-	return nil
+	return mySkillsList, nil
 }
