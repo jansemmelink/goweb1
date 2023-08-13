@@ -78,7 +78,8 @@
                     {"header":{"":"Date"}, "value":{"":"{{.Date}}"}},
                     {"header":{"":"Type"}, "value":{"":"{{.Type}}"}}],
                 "item_set":"Job",
-                "item_next":[{"item":"job-menu"}]
+                "__item_next":[{"item":"job-menu"}],
+                "item_next":[{"item":"job-edit"}]
             },
             "operations":[
                 {"caption":{"":"Add Job"}, "next":[
@@ -100,6 +101,15 @@
                 ]},
                 {"caption":{"":"Back"}, "next":[{"item":"my-jobs-list"}]}
             ]
+        }
+    },
+    "job-edit":{
+        "edit":{
+            "title":{"":"Job"},
+            "get_func":"getJob",
+            "get_arg_name":"Job.Id",
+            "upd_func":"updJob",
+            "saved_next":[{"item":"my-jobs-list"}]
         }
     },
     "my-skills-menu":{
@@ -143,5 +153,4 @@
             "saved_next":[{"item":"home"}]
         }
     }
-
 }

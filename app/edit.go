@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/go-msvc/data"
 	"github.com/go-msvc/errors"
 	"github.com/gorilla/sessions"
 )
@@ -54,7 +55,11 @@ func (edit edit) Render(ctx context.Context, buffer io.Writer) (*PageData, error
 	if edit.GetArgName != "" {
 		req, ok := session.Values[edit.GetArgName]
 		if !ok {
-			return nil, errors.Errorf("get_func(req:%s) not defined", edit.GetArgName)
+			var err error
+			req, err = data.Get(sessionData(session), edit.GetArgName)
+			if err != nil {
+				return nil, errors.Wrapf(err, "get_func(req:%s) not defined", edit.GetArgName)
+			}
 		}
 		args = append(args, reflect.ValueOf(req))
 	}
