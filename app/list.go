@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -40,17 +41,22 @@ func (list list) Validate(app App) error {
 } //list.Validate()
 
 type ListOptions struct {
-	ItemCaption Caption      `json:"item_caption"`
-	ItemSet     string       `json:"item_set" doc:"When select, store item column values in this name"`
-	ItemNext    fileItemNext `json:"item_next"`
-	ShowFilter  bool         `json:"show_filter"`
-	SortFields  []string     `json:"sort_fields"`
-	Limit       int          `json:"limit"`
+	Columns    []ListColumn `json:"columns"`
+	ItemSet    string       `json:"item_set" doc:"When select, store item column values in this name"`
+	ItemNext   fileItemNext `json:"item_next"`
+	ShowFilter bool         `json:"show_filter"`
+	SortFields []string     `json:"sort_fields"`
+	Limit      int          `json:"limit"`
 }
 
 func (o ListOptions) Validate() error {
-	if err := o.ItemCaption.Validate(false); err != nil {
-		return errors.Wrapf(err, "invalid/blank item_caption")
+	if len(o.Columns) < 1 {
+		return errors.Errorf("missing columns")
+	}
+	for colIndex, col := range o.Columns {
+		if err := col.Validate(); err != nil {
+			return errors.Wrapf(err, "invalid column[%d]", colIndex)
+		}
 	}
 	if o.Limit < 0 {
 		return errors.Errorf("limit:%d is negative", o.Limit)
@@ -59,14 +65,42 @@ func (o ListOptions) Validate() error {
 	return nil
 }
 
+type ListColumn struct {
+	Header Caption `json:"header" doc:"Template to construct the column header to display above the column, based on session data. May be blank."`
+	Value  Caption `json:"value" doc:"Template to construct the column value for this item, based on item data. Must be specified."`
+}
+
+func (lc ListColumn) Validate() error {
+	if err := lc.Header.Validate(false); err != nil {
+		return errors.Wrapf(err, "missing/invalid header")
+	}
+	if err := lc.Value.Validate(false); err != nil {
+		return errors.Wrapf(err, "missing/invalid value")
+	}
+	return nil
+}
+
 func (list list) Render(ctx context.Context, buffer io.Writer) (*PageData, error) {
+	lang := ctx.Value(CtxLang{}).(string)
+	session := ctx.Value(CtxSession{}).(*sessions.Session)
+
+	//clear items and then call actions to generate fresh list of items
+	delete(session.Values, "Items")
+	if err := list.GetItems.Execute(ctx); err != nil {
+		return nil, errors.Wrapf(err, "failed to get items")
+	}
+	//items must be an array of structs or map[string]interface{}
+	columnList, ok := session.Values["Items"].(ColumnList)
+	if !ok {
+		return nil, errors.Errorf("Items (%T) not ColumnList", session.Values["Items"])
+	}
+
+	//start prepare the template data so we can add info
+	//about columns, items and operations below
 	pageData := PageData{
 		Links: map[string]fileItemNext{},
 		Data:  nil,
 	}
-
-	lang := ctx.Value(CtxLang{}).(string)
-	session := ctx.Value(CtxSession{}).(*sessions.Session)
 	title, err := list.Title.Render(lang, sessionData(session))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to render title")
@@ -75,33 +109,40 @@ func (list list) Render(ctx context.Context, buffer io.Writer) (*PageData, error
 		Title:      title,
 		Items:      nil,
 		Operations: []tmplDataForListOperation{},
+		Columns:    []tmplDataForListColumn{},
 	}
 
-	//clear items and then call actions to generate fresh list of items
-	delete(session.Values, "Items")
-	if err := list.GetItems.Execute(ctx); err != nil {
-		return nil, errors.Wrapf(err, "failed to get items")
-	}
-	log.Debugf("after action: %+v", sessionData(session))
+	//describe columns to be displayed
+	for colIndex, col := range list.Options.Columns {
+		header, err := col.Header.Render(lang, sessionData(session))
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to render column[%d] header", colIndex)
+		}
+		listTmplData.Columns = append(listTmplData.Columns, tmplDataForListColumn{
+			Header: header,
+		})
+	} //for each column
 
-	//items must be an array of structs or map[string]interface{}
-	columnList, ok := session.Values["Items"].(ColumnList)
-	if !ok {
-		return nil, errors.Errorf("Items (%T) not ColumnList", session.Values["Items"])
-	}
-
-	log.Debugf("%d columns with %d items to render", len(columnList.Columns), len(columnList.Items))
+	log.Debugf("%d items to render", len(columnList.Items))
 	//add list items
 	sessionItems := map[string]ColumnItem{}
 	for itemIndex, item := range columnList.Items {
-		//item caption is templated from item data
-		caption, err := list.Options.ItemCaption.Render(lang, item)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to render item caption")
-		}
 		uuid := uuid.New().String()
+		itemData := tmplDataForListItem{
+			ColumnValues: []string{},
+			NextUUID:     uuid,
+		}
+
+		//render each column value
+		for colIndex, col := range list.Options.Columns {
+			caption, err := col.Value.Render(lang, item)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to render item[%d] caption for col[%d]", itemIndex, colIndex)
+			}
+			itemData.ColumnValues = append(itemData.ColumnValues, caption)
+		}
 		sessionItems[uuid] = item
-		log.Debugf("  item[%d]: %+v -> caption:\"%s\" -> %s", itemIndex, item, caption, uuid)
+		log.Debugf("  item[%d]: %+v -> %+v -> %s", itemIndex, item, itemData.ColumnValues, uuid)
 
 		//next is the same for all item except it sets the selected item value as well
 		pageData.Links[uuid] = append(fileItemNext{
@@ -111,11 +152,7 @@ func (list list) Render(ctx context.Context, buffer io.Writer) (*PageData, error
 				ValueStr: "Items[" + uuid + "]",
 			}}}, list.Options.ItemNext...)
 
-		listTmplData.Items = append(listTmplData.Items,
-			tmplDataForListItem{
-				Caption:  caption,
-				NextUUID: uuid,
-			})
+		listTmplData.Items = append(listTmplData.Items, itemData)
 	}
 	session.Values["Items"] = sessionItems
 
@@ -135,6 +172,12 @@ func (list list) Render(ctx context.Context, buffer io.Writer) (*PageData, error
 		log.Debugf("Added operation: %+v", operTmpl)
 	}
 
+	{
+		log.Debugf("listTmplData: %+v", listTmplData)
+		j, _ := json.Marshal(listTmplData)
+		log.Debugf("listTmplData: %s", string(j))
+	}
+
 	tmplData := TmplData{
 		NavBar: TmplNavBar{
 			Email: "a@b.c", //todo...
@@ -149,13 +192,18 @@ func (list list) Render(ctx context.Context, buffer io.Writer) (*PageData, error
 
 type tmplDataForList struct {
 	Title      string
+	Columns    []tmplDataForListColumn
 	Items      []tmplDataForListItem
 	Operations []tmplDataForListOperation
 }
 
+type tmplDataForListColumn struct {
+	Header string
+}
+
 type tmplDataForListItem struct {
-	Caption  string
-	NextUUID string
+	ColumnValues []string
+	NextUUID     string
 }
 
 type tmplDataForListOperation struct {
@@ -175,8 +223,7 @@ func init() {
 
 // list action function that sets "Items" must return ColumnList
 type ColumnList struct {
-	Columns []string
-	Items   []ColumnItem
+	Items []ColumnItem
 }
 
 type ColumnItem map[string]interface{}

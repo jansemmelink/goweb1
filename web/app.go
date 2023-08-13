@@ -338,11 +338,11 @@ func redirect(httpRes http.ResponseWriter, message, button, link string) {
 }
 
 func logSession(ctx context.Context, title string) {
-	log.Debugf("SESSION %s", title)
-	session := ctx.Value(app.CtxSession{}).(*sessions.Session)
-	for n, v := range session.Values {
-		log.Debugf("  Session[%s] = (%T)%+v", n, v, v)
-	}
+	// log.Debugf("SESSION %s", title)
+	// session := ctx.Value(app.CtxSession{}).(*sessions.Session)
+	// for n, v := range session.Values {
+	// 	log.Debugf("  Session[%s] = (%T)%+v", n, v, v)
+	// }
 }
 
 func (w webApp) navigateTo(ctx context.Context, nextItemId string) (string, app.AppItem, error) {

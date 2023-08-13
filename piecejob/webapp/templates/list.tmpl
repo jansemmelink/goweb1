@@ -9,9 +9,20 @@
   <p>[...] TODO Change nr to display</p>
 
   <!-- display the current filtered/sorted/limited list items -->
-  {{range $item := .Items}}
-		<p><a href="/?next={{$item.NextUUID}}">{{$item.Caption}}</a></p>
-  {{end}}
+  <table border="1">
+    <tr>
+      {{range $col := .Columns}}
+        <th>{{$col.Header}}</th>
+      {{end}}
+    </tr>
+    {{range $item := .Items}}
+      <tr>
+        {{range $col := $item.ColumnValues}}
+          <td><a href="/?next={{$item.NextUUID}}">{{$col}}</a></td>
+        {{end}}
+      </tr>
+    {{end}}
+  </table>
 
   <!-- user items are optional and apply to the list, e.g. add a new entry or do something with all displayed entries -->
   {{range $oper := .Operations}}

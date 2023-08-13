@@ -27,7 +27,9 @@
             "title":{"":"My Skills (LIST)"},
             "get_items":[{"Items":{"listOfSkills()":{}}}],
             "options":{
-                "item_caption":{"":"{{.Skill}}"},
+                "columns":[
+                    {"header":{"":"Skill"},"value":{"":"{{.Skill}}"}}
+                ],
                 "filter":true,
                 "sort":true
             },
@@ -46,7 +48,10 @@
             "options":{
                 "filter":true,
                 "sort":true,
-                "item_caption":{"":"{{.Date}}/{{.Type}}"},
+                "columns":[
+                    {"header":{"":"Combined"}, "value":{"":"{{.Date}}/{{.Type}}"}},
+                    {"header":{"":"Date"}, "value":{"":"{{.Date}}"}},
+                    {"header":{"":"Type"}, "value":{"":"{{.Type}}"}}],
                 "item_set":"Job",
                 "item_next":[{"item":"job-menu"}]
             },

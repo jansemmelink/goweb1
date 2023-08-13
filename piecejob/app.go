@@ -47,8 +47,7 @@ func listOfSkills(ctx context.Context, req GetMySkillsReq) (app.ColumnList, erro
 		{"Skill": "Painter"},
 	}
 	return app.ColumnList{
-		Columns: []string{"Skill"},
-		Items:   skills,
+		Items: skills,
 	}, nil
 }
 
@@ -67,7 +66,6 @@ func listOfJobs(ctx context.Context) (app.ColumnList, error) {
 		{"Date": "Fri", "Type": "Paint"},
 	}
 	return app.ColumnList{
-		Columns: []string{"Date", "Type"},
-		Items:   jobs,
+		Items: jobs,
 	}, nil
 }
